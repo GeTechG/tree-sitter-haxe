@@ -49,3 +49,6 @@ zig-out/
 *.zip
 
 *grammar.[0-9].js
+
+# Local CLI binary (downloaded via npm)
+/tree-sitter
