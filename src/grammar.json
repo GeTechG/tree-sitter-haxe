@@ -178,8 +178,17 @@
                           "type": "SEQ",
                           "members": [
                             {
-                              "type": "STRING",
-                              "value": "as"
+                              "type": "CHOICE",
+                              "members": [
+                                {
+                                  "type": "STRING",
+                                  "value": "as"
+                                },
+                                {
+                                  "type": "STRING",
+                                  "value": "in"
+                                }
+                              ]
                             },
                             {
                               "type": "FIELD",
@@ -244,8 +253,17 @@
                         ]
                       },
                       {
-                        "type": "STRING",
-                        "value": "as"
+                        "type": "CHOICE",
+                        "members": [
+                          {
+                            "type": "STRING",
+                            "value": "as"
+                          },
+                          {
+                            "type": "STRING",
+                            "value": "in"
+                          }
+                        ]
                       },
                       {
                         "type": "FIELD",
@@ -3017,8 +3035,25 @@
             "value": "macro"
           },
           {
-            "type": "SYMBOL",
-            "name": "_Expr"
+            "type": "CHOICE",
+            "members": [
+              {
+                "type": "SYMBOL",
+                "name": "_Expr"
+              },
+              {
+                "type": "SYMBOL",
+                "name": "ClassType"
+              },
+              {
+                "type": "SYMBOL",
+                "name": "EnumType"
+              },
+              {
+                "type": "SYMBOL",
+                "name": "_type_annotation"
+              }
+            ]
           }
         ]
       }
@@ -3456,21 +3491,150 @@
           "name": "TAnonymous"
         },
         {
-          "type": "SEQ",
+          "type": "SYMBOL",
+          "name": "_ct_paren"
+        },
+        {
+          "type": "PREC_RIGHT",
+          "value": 0,
+          "content": {
+            "type": "SEQ",
+            "members": [
+              {
+                "type": "STRING",
+                "value": "?"
+              },
+              {
+                "type": "SYMBOL",
+                "name": "_base_type"
+              }
+            ]
+          }
+        },
+        {
+          "type": "PREC_RIGHT",
+          "value": 0,
+          "content": {
+            "type": "SEQ",
+            "members": [
+              {
+                "type": "STRING",
+                "value": "..."
+              },
+              {
+                "type": "SYMBOL",
+                "name": "_base_type"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "_ct_paren": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "STRING",
+          "value": "("
+        },
+        {
+          "type": "CHOICE",
+          "members": [
+            {
+              "type": "SEQ",
+              "members": [
+                {
+                  "type": "SYMBOL",
+                  "name": "_ct_fun_param"
+                },
+                {
+                  "type": "REPEAT",
+                  "content": {
+                    "type": "SEQ",
+                    "members": [
+                      {
+                        "type": "STRING",
+                        "value": ","
+                      },
+                      {
+                        "type": "SYMBOL",
+                        "name": "_ct_fun_param"
+                      }
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "type": "BLANK"
+            }
+          ]
+        },
+        {
+          "type": "CHOICE",
           "members": [
             {
               "type": "STRING",
-              "value": "("
+              "value": ","
             },
             {
-              "type": "SYMBOL",
-              "name": "ComplexType"
-            },
-            {
-              "type": "STRING",
-              "value": ")"
+              "type": "BLANK"
             }
           ]
+        },
+        {
+          "type": "STRING",
+          "value": ")"
+        }
+      ]
+    },
+    "_ct_fun_param": {
+      "type": "CHOICE",
+      "members": [
+        {
+          "type": "SYMBOL",
+          "name": "_ct_fun_param_named"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "ComplexType"
+        }
+      ]
+    },
+    "_ct_fun_param_named": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "CHOICE",
+          "members": [
+            {
+              "type": "SYMBOL",
+              "name": "optional"
+            },
+            {
+              "type": "BLANK"
+            }
+          ]
+        },
+        {
+          "type": "FIELD",
+          "name": "name",
+          "content": {
+            "type": "SYMBOL",
+            "name": "identifier"
+          }
+        },
+        {
+          "type": "STRING",
+          "value": ":"
+        },
+        {
+          "type": "FIELD",
+          "name": "type",
+          "content": {
+            "type": "SYMBOL",
+            "name": "ComplexType"
+          }
         }
       ]
     },
@@ -4404,7 +4568,7 @@
                     },
                     {
                       "type": "SYMBOL",
-                      "name": "TypePath"
+                      "name": "ComplexType"
                     }
                   ]
                 }
@@ -4421,7 +4585,7 @@
                     },
                     {
                       "type": "SYMBOL",
-                      "name": "TypePath"
+                      "name": "ComplexType"
                     }
                   ]
                 }
@@ -4503,46 +4667,43 @@
           "name": "_type_decl_signature"
         },
         {
-          "type": "CHOICE",
-          "members": [
-            {
-              "type": "SEQ",
-              "members": [
-                {
-                  "type": "STRING",
-                  "value": "extends"
-                },
-                {
-                  "type": "FIELD",
-                  "name": "extends",
-                  "content": {
-                    "type": "SYMBOL",
-                    "name": "TypePath"
-                  }
-                }
-              ]
-            },
-            {
-              "type": "BLANK"
-            }
-          ]
-        },
-        {
           "type": "REPEAT",
           "content": {
-            "type": "SEQ",
+            "type": "CHOICE",
             "members": [
               {
-                "type": "STRING",
-                "value": "implements"
+                "type": "SEQ",
+                "members": [
+                  {
+                    "type": "STRING",
+                    "value": "extends"
+                  },
+                  {
+                    "type": "FIELD",
+                    "name": "extends",
+                    "content": {
+                      "type": "SYMBOL",
+                      "name": "TypePath"
+                    }
+                  }
+                ]
               },
               {
-                "type": "FIELD",
-                "name": "implements",
-                "content": {
-                  "type": "SYMBOL",
-                  "name": "TypePath"
-                }
+                "type": "SEQ",
+                "members": [
+                  {
+                    "type": "STRING",
+                    "value": "implements"
+                  },
+                  {
+                    "type": "FIELD",
+                    "name": "implements",
+                    "content": {
+                      "type": "SYMBOL",
+                      "name": "TypePath"
+                    }
+                  }
+                ]
               }
             ]
           }
@@ -5498,7 +5659,7 @@
               "members": [
                 {
                   "type": "SYMBOL",
-                  "name": "ComplexType"
+                  "name": "_type_argument"
                 },
                 {
                   "type": "REPEAT",
@@ -5511,7 +5672,7 @@
                       },
                       {
                         "type": "SYMBOL",
-                        "name": "ComplexType"
+                        "name": "_type_argument"
                       }
                     ]
                   }
@@ -5526,6 +5687,61 @@
         {
           "type": "STRING",
           "value": ">"
+        }
+      ]
+    },
+    "_type_argument": {
+      "type": "CHOICE",
+      "members": [
+        {
+          "type": "SYMBOL",
+          "name": "ComplexType"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "Int"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "Float"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "String"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "true"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "false"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "EArrayDecl"
+        },
+        {
+          "type": "SEQ",
+          "members": [
+            {
+              "type": "STRING",
+              "value": "-"
+            },
+            {
+              "type": "CHOICE",
+              "members": [
+                {
+                  "type": "SYMBOL",
+                  "name": "Int"
+                },
+                {
+                  "type": "SYMBOL",
+                  "name": "Float"
+                }
+              ]
+            }
+          ]
         }
       ]
     },
@@ -5601,8 +5817,15 @@
       "value": "[a-z_][a-zA-Z0-9_]*"
     },
     "type_name": {
-      "type": "PATTERN",
-      "value": "[A-Z][a-zA-Z0-9_]*"
+      "type": "TOKEN",
+      "content": {
+        "type": "PREC",
+        "value": 1,
+        "content": {
+          "type": "PATTERN",
+          "value": "[A-Z][a-zA-Z0-9_]*"
+        }
+      }
     },
     "optional": {
       "type": "STRING",
@@ -6253,6 +6476,10 @@
     [
       "import",
       "_dot_path"
+    ],
+    [
+      "ClassType",
+      "EnumType"
     ]
   ],
   "precedences": [],

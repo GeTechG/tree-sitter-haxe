@@ -8,7 +8,7 @@
         "required": false,
         "types": [
           {
-            "type": "TypePath",
+            "type": "ComplexType",
             "named": true
           },
           {
@@ -32,7 +32,7 @@
         "required": false,
         "types": [
           {
-            "type": "TypePath",
+            "type": "ComplexType",
             "named": true
           },
           {
@@ -334,7 +334,7 @@
     "named": true,
     "fields": {
       "extends": {
-        "multiple": false,
+        "multiple": true,
         "required": false,
         "types": [
           {
@@ -638,6 +638,22 @@
             "named": false
           },
           {
+            "type": ",",
+            "named": false
+          },
+          {
+            "type": "...",
+            "named": false
+          },
+          {
+            "type": ":",
+            "named": false
+          },
+          {
+            "type": "?",
+            "named": false
+          },
+          {
             "type": "ComplexType",
             "named": true
           },
@@ -647,6 +663,24 @@
           },
           {
             "type": "TypePath",
+            "named": true
+          },
+          {
+            "type": "identifier",
+            "named": true
+          },
+          {
+            "type": "optional",
+            "named": true
+          }
+        ]
+      },
+      "name": {
+        "multiple": true,
+        "required": false,
+        "types": [
+          {
+            "type": "identifier",
             "named": true
           }
         ]
@@ -660,10 +694,20 @@
             "named": true
           }
         ]
+      },
+      "type": {
+        "multiple": true,
+        "required": false,
+        "types": [
+          {
+            "type": "ComplexType",
+            "named": true
+          }
+        ]
       }
     },
     "children": {
-      "multiple": false,
+      "multiple": true,
       "required": false,
       "types": [
         {
@@ -676,6 +720,10 @@
         },
         {
           "type": "TypePath",
+          "named": true
+        },
+        {
+          "type": "optional",
           "named": true
         }
       ]
@@ -7915,6 +7963,10 @@
             "named": false
           },
           {
+            "type": "-",
+            "named": false
+          },
+          {
             "type": "<",
             "named": false
           },
@@ -7924,6 +7976,30 @@
           },
           {
             "type": "ComplexType",
+            "named": true
+          },
+          {
+            "type": "EArrayDecl",
+            "named": true
+          },
+          {
+            "type": "Float",
+            "named": true
+          },
+          {
+            "type": "Int",
+            "named": true
+          },
+          {
+            "type": "String",
+            "named": true
+          },
+          {
+            "type": "false",
+            "named": true
+          },
+          {
+            "type": "true",
             "named": true
           }
         ]
@@ -8758,6 +8834,10 @@
             "named": false
           },
           {
+            "type": "in",
+            "named": false
+          },
+          {
             "type": "package_name",
             "named": true
           }
@@ -8963,11 +9043,26 @@
   {
     "type": "macro",
     "named": true,
-    "fields": {},
+    "fields": {
+      "type": {
+        "multiple": false,
+        "required": false,
+        "types": [
+          {
+            "type": "ComplexType",
+            "named": true
+          }
+        ]
+      }
+    },
     "children": {
       "multiple": false,
-      "required": true,
+      "required": false,
       "types": [
+        {
+          "type": "ClassType",
+          "named": true
+        },
         {
           "type": "EArray",
           "named": true
@@ -9070,6 +9165,10 @@
         },
         {
           "type": "EWhile",
+          "named": true
+        },
+        {
+          "type": "EnumType",
           "named": true
         },
         {

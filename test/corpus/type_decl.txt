@@ -154,7 +154,6 @@ typedef A = {}
     type: (ComplexType
       (TAnonymous))))
 
-
 =========================
 typedef declaration alias
 =========================
@@ -296,3 +295,60 @@ interface IBar extends IBaz {}
     name: (type_name)
     extends: (TypePath
       name: (type_name))))
+
+====================
+interface multiple extends
+====================
+
+interface Foo extends A extends B {}
+
+---
+
+(module
+  (ClassType
+    (type_name)
+    (TypePath
+      (type_name))
+    (TypePath
+      (type_name))))
+
+====================
+class implements before extends
+====================
+
+class Foo implements I extends Base {}
+
+---
+
+(module
+  (ClassType
+    (type_name)
+    (TypePath
+      (type_name))
+    (TypePath
+      (type_name))))
+
+====================
+abstract from/to complex types
+====================
+
+abstract A(Int) from Int->Int to (String) {}
+
+---
+
+(module
+  (AbstractType
+    (type_name)
+    (ComplexType
+      (TypePath
+        (type_name)))
+    (ComplexType
+      (TypePath
+        (type_name))
+      (ComplexType
+        (TypePath
+          (type_name))))
+    (ComplexType
+      (ComplexType
+        (TypePath
+          (type_name))))))

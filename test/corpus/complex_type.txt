@@ -1,0 +1,81 @@
+====================
+function type with named and optional args
+====================
+
+typedef Cb = (?x:Int, y:String) -> Bool;
+
+---
+
+(module
+  (DefType
+    (type_name)
+    (ComplexType
+      (optional)
+      (identifier)
+      (ComplexType
+        (TypePath
+          (type_name)))
+      (identifier)
+      (ComplexType
+        (TypePath
+          (type_name)))
+      (ComplexType
+        (TypePath
+          (type_name))))))
+
+====================
+function type unnamed multi-arg
+====================
+
+typedef Cb = (Int, String) -> Bool;
+
+---
+
+(module
+  (DefType
+    (type_name)
+    (ComplexType
+      (ComplexType
+        (TypePath
+          (type_name)))
+      (ComplexType
+        (TypePath
+          (type_name)))
+      (ComplexType
+        (TypePath
+          (type_name))))))
+
+====================
+rest argument type
+====================
+
+typedef Cb = (...Int) -> Void;
+
+---
+
+(module
+  (DefType
+    (type_name)
+    (ComplexType
+      (ComplexType
+        (TypePath
+          (type_name)))
+      (ComplexType
+        (TypePath
+          (type_name))))))
+
+====================
+const type parameters
+====================
+
+typedef V = Vector<3>;
+
+---
+
+(module
+  (DefType
+    (type_name)
+    (ComplexType
+      (TypePath
+        (type_name)
+        (Int)))))

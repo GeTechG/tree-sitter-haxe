@@ -170,6 +170,7 @@ export default grammar({
     [$._type_decl, $._conditional_body],
     [$.cases],
     [$.import, $._dot_path],
+    [$.ClassType, $.EnumType],
   ],
   inline: ($) => [$._semicolon, $.visibility, $.rest, $._expr_postfix],
   word: ($) => $.identifier,
@@ -197,7 +198,10 @@ export default grammar({
             optional(
               choice(
                 seq(".", $.wildcard),
-                seq("as", field("alias", choice($.type_name, $.identifier))),
+                seq(
+                  choice("as", "in"),
+                  field("alias", choice($.type_name, $.identifier)),
+                ),
               ),
             ),
           ),
@@ -206,7 +210,7 @@ export default grammar({
               "path",
               seq(
                 dotSep1($.package_name),
-                "as",
+                choice("as", "in"),
                 field("alias", choice($.type_name, $.identifier)),
               ),
             ),
@@ -629,7 +633,14 @@ export default grammar({
         // ),
       ),
 
-    macro: ($) => prec(PREC.MACRO, seq("macro", $._Expr)),
+    macro: ($) =>
+      prec(
+        PREC.MACRO,
+        seq(
+          "macro",
+          choice($._Expr, $.ClassType, $.EnumType, $._type_annotation),
+        ),
+      ),
     reification: ($) =>
       prec(
         PREC.UNARY,
@@ -686,7 +697,22 @@ export default grammar({
         //field("TPath", prec(PREC.PRIMARY, $.TypePath)),
         prec(PREC.PRIMARY, $.TypePath),
         $.TAnonymous,
-        seq("(", $.ComplexType, ")"),
+        $._ct_paren, // ( T ) and function-arg lists: (), (T, U), (a:T, ?b:U)
+        prec.right(seq("?", $._base_type)), // TOptional: ?Int
+        prec.right(seq("...", $._base_type)), // TRest: ...Int -> haxe.Rest<Int>
+      ),
+
+    // Parenthesised type: a single (T) or a function-type argument list
+    // (a:T, ?b:U). Whether it is a real arg list is decided by a following "->".
+    _ct_paren: ($) =>
+      seq("(", commaSep($._ct_fun_param), optional(","), ")"),
+    _ct_fun_param: ($) => choice($._ct_fun_param_named, $.ComplexType),
+    _ct_fun_param_named: ($) =>
+      seq(
+        optional($.optional),
+        field("name", $.identifier),
+        ":",
+        field("type", $.ComplexType),
       ),
 
     TAnonymous: ($) =>
@@ -765,8 +791,8 @@ export default grammar({
         ")",
         repeat(
           choice(
-            field("from", seq("from", $.TypePath)),
-            field("to", seq("to", $.TypePath)),
+            field("from", seq("from", $.ComplexType)),
+            field("to", seq("to", $.ComplexType)),
           ),
         ),
         "{",
@@ -779,8 +805,12 @@ export default grammar({
         optional(repeat1(choice($.visibility, "abstract", "extern", "final"))),
         field("kind", choice("class", "interface")),
         $._type_decl_signature,
-        optional(seq("extends", field("extends", $.TypePath))),
-        repeat(seq("implements", field("implements", $.TypePath))),
+        repeat(
+          choice(
+            seq("extends", field("extends", $.TypePath)),
+            seq("implements", field("implements", $.TypePath)),
+          ),
+        ),
         "{",
         repeat($._class_field),
         "}",
@@ -954,7 +984,20 @@ export default grammar({
       prec(PREC.TYPE_ANNOTATION, seq(":", field("type", $.ComplexType))),
 
     _type_params: ($) => seq("<", commaSep1($.TypeParameter), ">"),
-    _type_arguments: ($) => seq("<", commaSep($.ComplexType), ">"),
+    _type_arguments: ($) => seq("<", commaSep($._type_argument), ">"),
+    // A type argument is a type or, for const type parameters, a literal/const
+    // expression (e.g. `Vector<3>`, `Foo<"x">`, `Foo<true>`, `Foo<[1,2]>`).
+    _type_argument: ($) =>
+      choice(
+        $.ComplexType,
+        $.Int,
+        $.Float,
+        $.String,
+        $.true,
+        $.false,
+        $.EArrayDecl,
+        seq("-", choice($.Int, $.Float)),
+      ),
 
     _function_args: ($) =>
       seq("(", field("args", commaSep($.FunctionArg)), ")"),
@@ -965,7 +1008,10 @@ export default grammar({
 
     identifier: (_) => /[a-zA-Z_][a-zA-Z0-9_]*/,
     package_name: (_) => /[a-z_][a-zA-Z0-9_]*/,
-    type_name: (_) => /[A-Z][a-zA-Z0-9_]*/,
+    // Higher lexical precedence so an uppercase word prefers `type_name` over
+    // `identifier` in states where both are valid (e.g. unnamed function-type
+    // args `(Int, String) -> T`); lowercase words still fall back to identifier.
+    type_name: (_) => token(prec(1, /[A-Z][a-zA-Z0-9_]*/)),
 
     optional: (_) => "?",
     wildcard: (_) => "*",
