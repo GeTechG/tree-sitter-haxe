@@ -250,3 +250,49 @@ typedef A = {
           type: (ComplexType
             (TypePath
               name: (type_name))))))))
+
+=================================================
+class declaration extends + multi-implements
+=================================================
+
+class EnumValueMap<K:EnumValue, V> extends haxe.ds.BalancedTree<K, V> implements haxe.Constraints.IMap<K, V> implements Foo {}
+interface IBar extends IBaz {}
+
+---
+
+(module
+  (ClassType
+    name: (type_name)
+    (TypeParameter
+      name: (type_name)
+      constraint: (ComplexType
+        (TypePath
+          name: (type_name))))
+    (TypeParameter
+      name: (type_name))
+    extends: (TypePath
+      pack: (package_name)
+      pack: (package_name)
+      name: (type_name)
+      params: (ComplexType
+        (TypePath
+          name: (type_name)))
+      params: (ComplexType
+        (TypePath
+          name: (type_name))))
+    implements: (TypePath
+      pack: (package_name)
+      name: (type_name)
+      sub: (identifier)
+      params: (ComplexType
+        (TypePath
+          name: (type_name)))
+      params: (ComplexType
+        (TypePath
+          name: (type_name))))
+    implements: (TypePath
+      name: (type_name)))
+  (ClassType
+    name: (type_name)
+    extends: (TypePath
+      name: (type_name))))
