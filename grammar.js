@@ -986,8 +986,8 @@ export default grammar({
         /0x[a-fA-F\d][a-fA-F\d_]*/,
         /0b[01][01_]*_?[iu]\d+/,
         /0b[01][01_]*/,
-        /0o[0-7][0-7_]*_?[iu]\d+/,
-        /0o[0-7][0-7_]*/,
+        // No octal: the Haxe lexer (src/syntax/lexer.ml) accepts only decimal,
+        // 0x and 0b integer forms; `0o...` is intentionally rejected.
         /\d[\d_]*_?[iu]\d+/,
         /\d[\d_]*/,
       ),

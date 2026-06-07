@@ -5486,14 +5486,6 @@
         },
         {
           "type": "PATTERN",
-          "value": "0o[0-7][0-7_]*_?[iu]\\d+"
-        },
-        {
-          "type": "PATTERN",
-          "value": "0o[0-7][0-7_]*"
-        },
-        {
-          "type": "PATTERN",
           "value": "\\d[\\d_]*_?[iu]\\d+"
         },
         {

@@ -106,3 +106,20 @@ modern numeric literals
   (EBinop
     (Int)
     (Int)))
+
+====================
+octal literal is not a single Int (0o unsupported in Haxe)
+====================
+
+var octal = 0o644;
+
+---
+
+; Haxe has no 0o octal form, so this must NOT lex as one Int. It splits into
+; the decimal `0` value and a separate `o644` identifier; re-adding an octal
+; branch would collapse it back to a single (Int) and fail this test.
+(module
+  (EVars
+    (identifier)
+    (Int))
+  (identifier))
