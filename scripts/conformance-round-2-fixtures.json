@@ -1,0 +1,86 @@
+{
+  "haxeRevision": "94673be33d7b4938c59acd39314d3a6e02674724",
+  "note": "Per-construct fixture list for harden-tree-sitter-haxe-round-2. Each gap maps to at least one real std/ source path (relative to the pinned Haxe checkout) plus a minimal reproducing snippet drawn from that file. Used to verify round-2 progress.",
+  "baselineBefore": {
+    "std": { "cleanFiles": 2290, "failedFiles": 293, "errorNodes": 1559, "missingNodes": 19 }
+  },
+  "constructs": [
+    {
+      "id": "extern-abstract",
+      "stdFiles": 121,
+      "fixture": "std/flash/net/URLLoaderDataFormat.hx:3",
+      "snippet": "@:native(\"flash.net.URLLoaderDataFormat\") extern enum abstract URLLoaderDataFormat(String) {",
+      "compilerNote": "decl_flag_to_abstract_flag (src/syntax/parser.ml:250) accepts only DPrivate->AbPrivate and DExtern->AbExtern; DFinal et al. are unsupported_decl_flag_abstract. Add extern (and private), NOT final."
+    },
+    {
+      "id": "compile-condition-call",
+      "stdFiles": 30,
+      "fixture": "std/hl/Bytes.hx:93",
+      "snippet": "#if (hl_ver >= version(\"1.10.0\"))"
+    },
+    {
+      "id": "modifier-in-conditional-body",
+      "stdFiles": 19,
+      "fixture": "std/DateTools.hx:243",
+      "snippet": "public static #if (js || flash || php) inline #end function makeUtc(...)"
+    },
+    {
+      "id": "anonymous-structure-type",
+      "stdFiles": 15,
+      "fixture": "std/php/NativeAssocArray.hx:62",
+      "snippet": "public inline function next():{key:String, value:T} {"
+    },
+    {
+      "id": "conditional-in-expression-or-heritage",
+      "stdFiles": 15,
+      "fixture": "std/flash/display/MovieClip.hx:3",
+      "snippet": "extern class MovieClip extends Sprite #if !flash_strict implements Dynamic #end {",
+      "fixtureExpression": "std/StringTools.hx:156",
+      "snippetExpression": "for (code in #if neko iterator(s) #else new haxe.iterators.StringIteratorUnicode(s) #end) {"
+    },
+    {
+      "id": "trailing-dot-float",
+      "stdFiles": 14,
+      "fixture": "std/DateTools.hx:252",
+      "snippet": "return 0.;"
+    },
+    {
+      "id": "generic-function-expression-metadata-arg",
+      "stdFiles": 14,
+      "fixture": "std/js/lib/Reflect.hx:58",
+      "snippet": "@:overload(function<T>(target:Array<T>, propertyKey:Int):Bool {})"
+    },
+    {
+      "id": "metadata-prefixed-expression",
+      "stdFiles": 9,
+      "fixture": "std/php/Lib.hx:94",
+      "snippet": "return @:privateAccess a.arr;"
+    },
+    {
+      "id": "reserved-words-as-identifiers",
+      "stdFiles": 6,
+      "fixture": "std/flash/Lib.hx:82",
+      "snippet": "public inline static function as<T>(v:Dynamic, c:Class<T>):Null<T> {",
+      "fixtureCall": "std/flash/_std/Std.hx:36",
+      "snippetCall": "return flash.Lib.as(value, c);"
+    },
+    {
+      "id": "case-var-capture",
+      "stdFiles": 6,
+      "fixture": "std/StringTools.hx:97",
+      "snippet": "case var chr:"
+    },
+    {
+      "id": "single-quote-dollar-escape",
+      "stdFiles": 1,
+      "fixture": "std/haxe/macro/ExampleJSGenerator.hx:140",
+      "snippet": "print('$p = $$hxClasses[\\'$p\\'] = ');"
+    },
+    {
+      "id": "underscore-arrow-parameter",
+      "stdFiles": 1,
+      "fixture": "std/neko/_std/sys/thread/ThreadImpl.hx:40",
+      "snippet": "return thread_create((_) -> job(), null);"
+    }
+  ]
+}

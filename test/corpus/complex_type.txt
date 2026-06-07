@@ -79,3 +79,45 @@ typedef V = Vector<3>;
       (TypePath
         (type_name)
         (Int)))))
+
+=====================================
+anonymous structure type (comma form)
+=====================================
+
+class C { var u:{sec:Int, usec:Int}; }
+
+---
+
+(module
+  (ClassType
+    name: (type_name)
+    (ClassVar
+      name: (identifier)
+      type: (ComplexType
+        (TAnonymous
+          (Field
+            name: (identifier)
+            type: (ComplexType
+              (TypePath
+                name: (type_name))))
+          (Field
+            name: (identifier)
+            type: (ComplexType
+              (TypePath
+                name: (type_name)))))))))
+
+=====================================
+empty anonymous structure type
+=====================================
+
+class C { var h:{}; }
+
+---
+
+(module
+  (ClassType
+    name: (type_name)
+    (ClassVar
+      name: (identifier)
+      type: (ComplexType
+        (TAnonymous)))))

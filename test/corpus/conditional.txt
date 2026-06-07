@@ -131,3 +131,137 @@ class A {}
     (conditional_end))
   (ClassType
     name: (type_name)))
+
+==========================================
+compile-condition call expression in #if
+==========================================
+
+#if (hl_ver >= version("1.10.0"))
+class C {}
+#end
+
+---
+
+(module
+  (conditional
+    (compile_condition
+      (compile_condition
+        (compile_condition
+          (identifier))
+        (compile_condition
+          (compile_condition
+            (identifier))
+          (compile_condition
+            (String
+              (fragment))))))
+    (ClassType
+      name: (type_name))
+    (conditional_end)))
+
+==========================================
+modifier keyword in conditional body
+==========================================
+
+class C {
+  public #if !cppia inline #end function f() {}
+}
+
+---
+
+(module
+  (ClassType
+    name: (type_name)
+    (ClassMethod
+      (conditional
+        (compile_condition
+          (compile_condition
+            (identifier)))
+        (modifier)
+        (conditional_end))
+      name: (identifier)
+      body: (EBlock))))
+
+==========================================
+conditional in for-in expression position
+==========================================
+
+class C {
+  function f() { for (c in #if neko a #else b #end) {} }
+}
+
+---
+
+(module
+  (ClassType
+    name: (type_name)
+    (ClassMethod
+      name: (identifier)
+      body: (EBlock
+        (EFor
+          var: (identifier)
+          iterable: (EConditional
+            (compile_condition
+              (identifier))
+            (identifier)
+            (identifier)
+            (conditional_end))
+          body: (EBlock))))))
+
+==========================================
+conditional in class heritage position
+==========================================
+
+extern class C extends D #if !flash_strict implements Dynamic #end {}
+
+---
+
+(module
+  (ClassType
+    name: (type_name)
+    extends: (TypePath
+      name: (type_name))
+    (conditional
+      (compile_condition
+        (compile_condition
+          (identifier)))
+      implements: (TypePath
+        name: (type_name))
+      (conditional_end))))
+
+==========================================
+conditional condition regression forms
+==========================================
+
+#if !flag
+class A {}
+#elseif (defined)
+class B {}
+#elseif (python_version >= 3.4)
+class D {}
+#end
+
+---
+
+(module
+  (conditional
+    (compile_condition
+      (compile_condition
+        (identifier)))
+    (ClassType
+      name: (type_name))
+    (conditional_elseif
+      (compile_condition
+        (compile_condition
+          (identifier)))
+      (ClassType
+        name: (type_name)))
+    (conditional_elseif
+      (compile_condition
+        (compile_condition
+          (compile_condition
+            (identifier))
+          (compile_condition
+            (Float))))
+      (ClassType
+        name: (type_name)))
+    (conditional_end)))

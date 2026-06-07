@@ -333,3 +333,25 @@ switch (e) {
         body: (true)))
     default: (switch_default
       body: (false))))
+
+=====================================
+case var capture pattern
+=====================================
+
+class C { function f() { switch v { case var c: c; } } }
+
+---
+
+(module
+  (ClassType
+    name: (type_name)
+    (ClassMethod
+      name: (identifier)
+      body: (EBlock
+        (ESwitch
+          subject: (identifier)
+          cases: (cases
+            (switch_case
+              patterns: (capture_variable
+                name: (identifier))
+              body: (identifier))))))))

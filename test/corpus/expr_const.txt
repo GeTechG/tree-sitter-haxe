@@ -203,3 +203,108 @@ regular expression literals
 
 (module
   (Regexp))
+
+=====================================
+trailing-dot float as statement
+=====================================
+
+class C { function f() { return 0.; } }
+
+---
+
+(module
+  (ClassType
+    name: (type_name)
+    (ClassMethod
+      name: (identifier)
+      body: (EBlock
+        (EReturn
+          (Float))))))
+
+=====================================
+trailing-dot float in arithmetic and var list
+=====================================
+
+class C { function f() { var x = 0., y = 1000. + 2.; } }
+
+---
+
+(module
+  (ClassType
+    name: (type_name)
+    (ClassMethod
+      name: (identifier)
+      body: (EBlock
+        (EBinop
+          left: (EVars
+            name: (identifier)
+            value: (Float)
+            name: (identifier))
+          right: (EBinop
+            left: (Float)
+            right: (Float)))))))
+
+=====================================
+interval is not a trailing-dot float
+=====================================
+
+class C { function f() { for (i in 0...10) {} } }
+
+---
+
+(module
+  (ClassType
+    name: (type_name)
+    (ClassMethod
+      name: (identifier)
+      body: (EBlock
+        (EFor
+          var: (identifier)
+          iterable: (EBinop
+            left: (Int)
+            right: (Int))
+          body: (EBlock))))))
+
+=====================================
+integer field access is not a trailing-dot float
+=====================================
+
+class C { function f() { return arr[0].length; } }
+
+---
+
+(module
+  (ClassType
+    name: (type_name)
+    (ClassMethod
+      name: (identifier)
+      body: (EBlock
+        (EReturn
+          (EField
+            object: (EArray
+              array: (identifier)
+              index: (Int))
+            name: (identifier)))))))
+
+=====================================
+single-quote dollar escape interpolation
+=====================================
+
+class C { function f() { trace('$p = $$x'); } }
+
+---
+
+(module
+  (ClassType
+    name: (type_name)
+    (ClassMethod
+      name: (identifier)
+      body: (EBlock
+        (ECall
+          callee: (identifier)
+          args: (String
+            (interpolation
+              (identifier))
+            (fragment)
+            (escape_sequence)
+            (fragment)))))))

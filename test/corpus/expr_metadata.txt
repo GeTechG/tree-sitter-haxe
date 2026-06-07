@@ -44,3 +44,56 @@ metadata param
       (fragment)))
   (ClassType
     name: (type_name)))
+
+=====================================
+overload with generic function expression
+=====================================
+
+extern class C { @:overload(function<T>(a:T):T {}) function f():Void; }
+
+---
+
+(module
+  (ClassType
+    name: (type_name)
+    (MetaDataEntry
+      name: (identifier)
+      params: (EFunction
+        params: (TypeParameter
+          name: (type_name))
+        args: (FunctionArg
+          name: (identifier)
+          type: (ComplexType
+            (TypePath
+              name: (type_name))))
+        type: (ComplexType
+          (TypePath
+            name: (type_name)))
+        body: (EBlock)))
+    (ClassMethod
+      name: (identifier)
+      type: (ComplexType
+        (TypePath
+          name: (type_name))))))
+
+=====================================
+metadata-prefixed expression
+=====================================
+
+class C { function f() { return @:privateAccess (a.b); } }
+
+---
+
+(module
+  (ClassType
+    name: (type_name)
+    (ClassMethod
+      name: (identifier)
+      body: (EBlock
+        (EReturn
+          (EMeta
+            (MetaDataEntry
+              name: (identifier))
+            expr: (EField
+              object: (identifier)
+              name: (identifier))))))))

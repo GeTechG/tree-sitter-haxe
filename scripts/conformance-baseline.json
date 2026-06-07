@@ -1,21 +1,21 @@
 {
   "haxeRevision": "94673be33d7b4938c59acd39314d3a6e02674724",
-  "recordedFromGrammarRevision": "f18fc0234abcd969e57fcb893dfcf981bd1f1a53",
+  "recordedFromGrammarRevision": "round-2: harden-tree-sitter-haxe-round-2",
   "note": "Achieved-result floor: the std gate fails if cleanFiles drops or std error/missing nodes rise below/above these accepted values. Update only when an intentional improvement raises them.",
   "std": {
     "totalFiles": 2583,
-    "cleanFiles": 2290,
-    "failedFiles": 293,
-    "successPercent": 88.66,
-    "errorNodes": 1559,
-    "missingNodes": 19
+    "cleanFiles": 2502,
+    "failedFiles": 81,
+    "successPercent": 96.86,
+    "errorNodes": 609,
+    "missingNodes": 13
   },
   "repository": {
     "totalFiles": 5862,
-    "cleanFiles": 5149,
-    "failedFiles": 713,
-    "successPercent": 87.84,
-    "errorNodes": 2959,
-    "missingNodes": 75
+    "cleanFiles": 5412,
+    "failedFiles": 450,
+    "successPercent": 92.32,
+    "errorNodes": 1698,
+    "missingNodes": 66
   }
 }

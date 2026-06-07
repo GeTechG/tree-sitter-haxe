@@ -109,7 +109,7 @@ const RESERVED_KEYWORDS = [
 export default grammar({
   name: "haxe",
   extras: ($) => [/\s+/, $.comment, $.conditional],
-  externals: ($) => [$.InlineXml],
+  externals: ($) => [$.InlineXml, $._float_trailing_dot],
   reserved: {
     global: (_) => RESERVED_KEYWORDS,
   },
@@ -171,6 +171,7 @@ export default grammar({
     [$.EFunction],
     [$.TypePath],
     [$._EConst, $.FunctionArg, $.compile_condition],
+    [$.FunctionArg, $.compile_condition],
     [$._EConst, $.FunctionArg],
     [$._EConst, $._expr_lhs, $.compile_condition],
     [$._EConst, $._expr_lhs],
@@ -192,6 +193,7 @@ export default grammar({
     [$.cases],
     [$.import, $._dot_path],
     [$.ClassType, $.EnumType],
+    [$.FunctionArg, $.wildcard_pattern],
   ],
   inline: ($) => [
     $._semicolon,
@@ -345,7 +347,7 @@ export default grammar({
         seq(
           field("object", $._Expr),
           field("op", choice(".", "?.")),
-          field("name", $._identifier),
+          field("name", choice($._identifier, $._soft_keyword_ident)),
         ),
       ),
     EArray: ($) =>
@@ -573,7 +575,7 @@ export default grammar({
             field("var", $.identifier),
           ),
           "in",
-          field("iterable", $._Expr),
+          field("iterable", choice($._Expr, $.EConditional)),
           ")",
           field("body", $._block_or_expr),
         ),
@@ -624,12 +626,16 @@ export default grammar({
         ),
       ),
     cases: ($) => repeat1($.switch_case),
+    // `case var x:` binds `x` as a capture. Precedence above a type annotation
+    // so the trailing `:` is the case colon, not the start of `var x : T`.
+    capture_variable: ($) =>
+      prec(PREC.TYPE_ANNOTATION + 1, seq("var", field("name", $._identifier))),
     switch_case: ($) =>
       prec.dynamic(
         -1,
         seq(
           "case",
-          field("patterns", commaSep1($._Expr)),
+          field("patterns", commaSep1(choice($._Expr, $.capture_variable))),
           optional(seq("if", "(", field("guard", $._Expr), ")")),
           ":",
           field("body", repeat(seq($._Expr, optional($._semicolon)))),
@@ -766,9 +772,12 @@ export default grammar({
         seq(
           "{",
           optional(repeat1(seq(">", field("extends", $.TypePath), ","))),
+          // commaSep accepts zero Fields (the empty `{}` structure) and the
+          // comma short form `{a:T, b:U}`. The trailing semicolon that closes a
+          // typedef/var declaration is consumed by the enclosing rule, not here,
+          // so an anonymous-structure var type does not swallow the field's `;`.
           choice(seq(commaSep($.Field), optional(",")), repeat($._class_field)),
           "}",
-          optional($._semicolon),
         ),
       ),
     Field: ($) =>
@@ -798,7 +807,12 @@ export default grammar({
               repeat(seq(token.immediate("."), $._metadata_name_component)),
             ),
           ),
-          optional(seq("(", field("params", commaSep($._Expr)), ")")),
+          // Args `(` must immediately follow the name. With a space, the parens
+          // belong to a following expression so `@:privateAccess (a.b)` is an
+          // EMeta-prefixed expression, not a metadata argument list.
+          optional(
+            seq(token.immediate("("), field("params", commaSep($._Expr)), ")"),
+          ),
         ),
       ),
     _metadata_name_component: ($) =>
@@ -815,7 +829,9 @@ export default grammar({
           repeat($.MetaDataEntry),
           optional($.optional),
           optional(field("rest", $.rest)),
-          field("name", $._identifier),
+          // `_` is the wildcard keyword token; accept it as a parameter name so
+          // `(_) -> e` is an arrow function, not a parenthesised wildcard.
+          field("name", choice($._identifier, alias("_", $.identifier))),
           optional(field("type", $._type_annotation)),
           optional(seq("=", field("value", $._Expr))),
         ),
@@ -831,7 +847,10 @@ export default grammar({
 
     AbstractType: ($) =>
       seq(
-        optional(repeat1(choice($.visibility, "enum"))),
+        // `extern` and `private` (via $.visibility) are the only non-enum
+        // abstract rights the compiler's decl_flag_to_abstract_flag accepts
+        // (src/syntax/parser.ml); `final` is rejected, so it is omitted here.
+        optional(repeat1(choice($.visibility, "enum", "extern"))),
         "abstract",
         $._type_decl_signature,
         optional(seq("(", field("type", $.ComplexType), ")")),
@@ -965,11 +984,14 @@ export default grammar({
       seq(
         "function",
         optional(
-          seq(
-            field("name", choice($._identifier, alias("new", $.identifier))),
-            optional(field("params", $._type_params)),
+          field(
+            "name",
+            choice($._identifier, alias("new", $.identifier), $._soft_keyword_ident),
           ),
         ),
+        // Type parameters may appear without a name, e.g. the anonymous generic
+        // function expression `function<T>(a:T):T {}` used as a metadata arg.
+        optional(field("params", $._type_params)),
         $._function_args,
         optional(field("ret", $._type_annotation)),
         choice(field("body", $._block_or_expr), $._semicolon),
@@ -992,7 +1014,7 @@ export default grammar({
         /\d[\d_]*/,
       ),
 
-    Float: (_) =>
+    Float: ($) =>
       choice(
         /\d[\d_]*\.\d[\d_]*([eE][+-]?\d[\d_]*)?_?f\d+/,
         /\d[\d_]*\.\d[\d_]*([eE][+-]?\d[\d_]*)?/,
@@ -1003,6 +1025,10 @@ export default grammar({
         /\d[\d_]+[eE][+-]?\d[\d_]*_?f\d+/,
         /\d[\d_]+[eE][+-]?\d[\d_]*/,
         /\d[\d_]*_?f\d+/,
+        // Trailing-dot float `N.` (e.g. `0.`, `1000.`). An external token so the
+        // lexer can look past the dot and decline when the next char begins an
+        // interval `...` or a field access, which a regex (no lookahead) cannot.
+        $._float_trailing_dot,
       ),
 
     String: ($) =>
@@ -1012,6 +1038,9 @@ export default grammar({
           repeat(
             choice(
               alias(token.immediate(prec(1, /[^'\\$]+/)), $.fragment),
+              // `$$` is the literal-dollar escape in interpolated strings; it
+              // must out-munch the single-`$` interpolation start.
+              alias(token.immediate(prec(2, "$$")), $.escape_sequence),
               $.escape_sequence,
               $.interpolation,
             ),
@@ -1081,11 +1110,31 @@ export default grammar({
     // ------------------------------------------------------------------------
 
     visibility: (_) => choice("public", "private"),
+    // Field modifier keywords, usable as a lone `#if ... #end` conditional body.
+    // Higher precedence so a bare modifier token inside a conditional resolves
+    // to this rule rather than starting a class field / inline-call expression.
+    modifier: (_) =>
+      prec(
+        30,
+        choice(
+          "inline",
+          "static",
+          "final",
+          "dynamic",
+          "override",
+          "extern",
+          "overload",
+        ),
+      ),
 
     identifier: (_) => /[a-zA-Z_][a-zA-Z0-9_]*/,
     dollar_identifier: (_) => /\$[a-zA-Z_][a-zA-Z0-9_]*/,
     _identifier: ($) =>
       choice($.identifier, alias($.dollar_identifier, $.identifier)),
+    // `as` is a reserved keyword (used in `import ... as`), but the compiler also
+    // accepts it as a plain identifier for fields, methods, variables and calls.
+    // (`from`/`to` are not reserved, so they already work as identifiers.)
+    _soft_keyword_ident: ($) => alias("as", $.identifier),
     package_name: (_) => /[a-z_][a-zA-Z0-9_]*/,
     // Higher lexical precedence so an uppercase word prefers `type_name` over
     // `identifier` in states where both are valid (e.g. unnamed function-type
@@ -1117,6 +1166,21 @@ export default grammar({
           $.conditional_end,
         ),
       ),
+    // Conditional in expression position, whose branches are full expressions.
+    // Distinct from the floating `conditional` extra so it can fill a required
+    // expression slot (e.g. a for-loop iterable or a var initializer).
+    EConditional: ($) =>
+      prec.right(
+        PREC.CONDITIONAL,
+        seq(
+          "#if",
+          $.compile_condition,
+          $._Expr,
+          repeat(seq("#elseif", $.compile_condition, $._Expr)),
+          optional(seq("#else", $._Expr)),
+          $.conditional_end,
+        ),
+      ),
     compile_condition: ($) =>
       choice(
         $.identifier,
@@ -1126,6 +1190,8 @@ export default grammar({
         $.String,
         seq("(", $.compile_condition, ")"),
         prec.left(7, seq($.compile_condition, ".", $.identifier)),
+        // Function-call form, e.g. `version("1.10.0")` in `#if (hl_ver >= version(...))`.
+        prec.left(7, seq($.compile_condition, "(", commaSep($.compile_condition), ")")),
         prec.right(6, seq("!", $.compile_condition)),
         prec.left(
           5,
@@ -1155,6 +1221,11 @@ export default grammar({
         $._expr_statement,
         $._type_decl,
         $.visibility,
+        // Lone field-modifier keywords, e.g. `public #if !cppia inline #end function`.
+        $.modifier,
+        // Class-heritage clauses, e.g. `extends D #if !flag implements Dynamic #end`.
+        seq("extends", field("extends", $.TypePath)),
+        seq("implements", field("implements", $.TypePath)),
         $.conditional_error,
         repeat1($.MetaDataEntry),
       ),

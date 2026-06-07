@@ -352,3 +352,58 @@ abstract A(Int) from Int->Int to (String) {}
       (ComplexType
         (TypePath
           (type_name))))))
+
+==============================
+extern abstract declaration
+==============================
+
+extern abstract Foo(Int) {}
+
+---
+
+(module
+  (AbstractType
+    name: (type_name)
+    type: (ComplexType
+      (TypePath
+        name: (type_name)))))
+
+==================================
+extern enum abstract declaration
+==================================
+
+extern enum abstract Flush(Int) { var Yes; }
+
+---
+
+(module
+  (AbstractType
+    name: (type_name)
+    type: (ComplexType
+      (TypePath
+        name: (type_name)))
+    (ClassVar
+      name: (identifier))))
+
+==============================================
+metadata extern enum abstract declaration
+==============================================
+
+@:native("text") extern enum abstract URLLoaderDataFormat(String) { var TEXT = "text"; }
+
+---
+
+(module
+  meta: (MetaDataEntry
+    name: (identifier)
+    params: (String
+      (fragment)))
+  (AbstractType
+    name: (type_name)
+    type: (ComplexType
+      (TypePath
+        name: (type_name)))
+    (ClassVar
+      name: (identifier)
+      (String
+        (fragment)))))

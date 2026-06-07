@@ -6,6 +6,7 @@
 
 enum TokenType {
   INLINE_XML,
+  FLOAT_TRAILING_DOT,
 };
 
 void *tree_sitter_haxe_external_scanner_create(void) {
@@ -56,6 +57,33 @@ static bool is_name_char(int32_t c) {
 
 static bool is_whitespace(int32_t c) {
   return c == ' ' || c == '\t' || c == '\n' || c == '\r' || c == '\f';
+}
+
+// Haxe identifier-start character (src/syntax/lexer.ml `ident`): ASCII letter or
+// underscore. Used to decline a trailing-dot float when a field access follows.
+static bool is_haxe_ident_start(int32_t c) {
+  return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || c == '_';
+}
+
+// Scan a trailing-dot float `N.` (e.g. `0.`, `1_000.`): a decimal integer
+// followed by a single `.` that does NOT begin an interval `...`, a fractional
+// part, or a field access. Returns true (and marks the token) only on a real
+// trailing-dot float; otherwise leaves tokenization to the internal lexer.
+static bool scan_float_trailing_dot(TSLexer *lexer) {
+  if (lexer->lookahead < '0' || lexer->lookahead > '9') return false;
+  while ((lexer->lookahead >= '0' && lexer->lookahead <= '9') ||
+         lexer->lookahead == '_') {
+    lexer->advance(lexer, false);
+  }
+  if (lexer->lookahead != '.') return false;
+  lexer->advance(lexer, false);
+  int32_t after = lexer->lookahead;
+  if (after == '.' || (after >= '0' && after <= '9') || is_haxe_ident_start(after)) {
+    return false;
+  }
+  lexer->mark_end(lexer);
+  lexer->result_symbol = FLOAT_TRAILING_DOT;
+  return true;
 }
 
 // Growable buffer of code points for the root tag name. The root name can be
@@ -123,11 +151,24 @@ bool tree_sitter_haxe_external_scanner_scan(
   const bool *valid_symbols
 ) {
   (void)payload;
-  if (!valid_symbols[INLINE_XML]) return false;
+  if (!valid_symbols[FLOAT_TRAILING_DOT] && !valid_symbols[INLINE_XML]) {
+    return false;
+  }
 
+  // Leading whitespace is shared by both external tokens.
   while (is_whitespace(lexer->lookahead)) {
     lexer->advance(lexer, true);
   }
+
+  if (valid_symbols[FLOAT_TRAILING_DOT]) {
+    if (lexer->lookahead >= '0' && lexer->lookahead <= '9') {
+      // A digit can only begin the trailing-dot float here, never inline XML;
+      // decline (resetting the lexer) when it is an ordinary number.
+      return scan_float_trailing_dot(lexer);
+    }
+  }
+
+  if (!valid_symbols[INLINE_XML]) return false;
   if (lexer->lookahead != '<') return false;
   lexer->advance(lexer, false);
 

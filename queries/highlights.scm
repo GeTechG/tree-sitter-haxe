@@ -177,6 +177,9 @@
 (EVars
   "final" @keyword
   name: (identifier) @variable)
+(capture_variable
+  "var" @keyword
+  name: (identifier) @variable)
 
 ; macro reification -----------------------------------------------------------
 
@@ -212,3 +215,12 @@
   (conditional_end)
   (conditional_error)
 ] @keyword.directive
+
+; Conditional in expression position highlights only its directive keywords, so
+; the branch expressions keep their own highlighting.
+(EConditional
+  [
+    "#if"
+    "#elseif"
+    "#else"
+  ] @keyword.directive)

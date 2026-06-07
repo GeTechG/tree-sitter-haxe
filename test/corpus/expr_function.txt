@@ -21,3 +21,25 @@ arrow function expression
 (module
   (EArrowFunction
     (EBlock)))
+
+=====================================
+underscore arrow-function parameter
+=====================================
+
+class C { function f() { return g((_) -> 0); } }
+
+---
+
+(module
+  (ClassType
+    name: (type_name)
+    (ClassMethod
+      name: (identifier)
+      body: (EBlock
+        (EReturn
+          (ECall
+            callee: (identifier)
+            args: (EArrowFunction
+              args: (FunctionArg
+                name: (identifier))
+              body: (Int))))))))

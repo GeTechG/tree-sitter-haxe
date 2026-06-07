@@ -96,3 +96,52 @@ metadata: @:macro regression smoke test
 (module
   meta: (MetaDataEntry name: (identifier))
   (ClassType name: (type_name)))
+
+=====================================
+soft keyword as method name
+=====================================
+
+class C { static function as<T>(v:Dynamic):T { return null; } }
+
+---
+
+(module
+  (ClassType
+    name: (type_name)
+    (ClassMethod
+      name: (identifier)
+      params: (TypeParameter
+        name: (type_name))
+      args: (FunctionArg
+        name: (identifier)
+        type: (ComplexType
+          (TypePath
+            name: (type_name))))
+      type: (ComplexType
+        (TypePath
+          name: (type_name)))
+      body: (EBlock
+        (EReturn
+          (null))))))
+
+=====================================
+soft keyword as call field name
+=====================================
+
+class C { function f() { return Lib.as(value, c); } }
+
+---
+
+(module
+  (ClassType
+    name: (type_name)
+    (ClassMethod
+      name: (identifier)
+      body: (EBlock
+        (EReturn
+          (ECall
+            callee: (EField
+              object: (identifier)
+              name: (identifier))
+            args: (identifier)
+            args: (identifier)))))))

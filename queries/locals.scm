@@ -26,6 +26,9 @@
 (ETry
   name: (identifier) @local.definition)
 
+(capture_variable
+  name: (identifier) @local.definition)
+
 ; References -------------------------------------------------------------------
 
 (identifier) @local.reference
