@@ -49,7 +49,7 @@
     "install": "node-gyp-build",
     "prestart": "tree-sitter build --wasm",
     "start": "tree-sitter playground",
-    "test": "tree-sitter test && ./test-examples.sh",
+    "test": "tree-sitter test && ./test-examples.sh && ./scripts/test-binding.sh",
     "test-binding-node": "node --test bindings/node/*_test.cjs",
     "test-conformance": "./scripts/conformance.sh",
     "test-conformance-baseline": "./scripts/conformance.sh --check-baseline",

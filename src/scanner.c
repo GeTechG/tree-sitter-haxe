@@ -31,8 +31,18 @@ void tree_sitter_haxe_external_scanner_deserialize(
   (void)length;
 }
 
+// Mirror the Haxe lexer's `xml_name_start_char`
+// (HaxeFoundation/haxe src/syntax/lexer.ml): ASCII letters, '_', plus '$' and
+// ':' for JSX-style markup, and the XML 1.0 Unicode name-start ranges.
 static bool is_tag_start(int32_t c) {
-  return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
+  return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || c == '_' ||
+         c == '$' || c == ':' ||
+         (c >= 0xC0 && c <= 0xD6) || (c >= 0xD8 && c <= 0xF6) ||
+         (c >= 0xF8 && c <= 0x2FF) || (c >= 0x370 && c <= 0x37D) ||
+         (c >= 0x37F && c <= 0x1FFF) || (c >= 0x200C && c <= 0x200D) ||
+         (c >= 0x2070 && c <= 0x218F) || (c >= 0x2C00 && c <= 0x2FEF) ||
+         (c >= 0x3001 && c <= 0xD7FF) || (c >= 0xF900 && c <= 0xFDCF) ||
+         (c >= 0xFDF0 && c <= 0xFFFD) || (c >= 0x10000 && c <= 0xEFFFF);
 }
 
 static bool is_whitespace(int32_t c) {
@@ -53,7 +63,9 @@ bool tree_sitter_haxe_external_scanner_scan(
   if (lexer->lookahead != '<') return false;
 
   lexer->advance(lexer, false);
-  if (!is_tag_start(lexer->lookahead)) return false;
+  // Haxe allows an empty markup name (`<>...</>` fragments), so '>' is a valid
+  // start in addition to any xml_name_start_char.
+  if (!is_tag_start(lexer->lookahead) && lexer->lookahead != '>') return false;
 
   unsigned depth = 1;
   unsigned brace_depth = 0;
@@ -131,7 +143,9 @@ bool tree_sitter_haxe_external_scanner_scan(
     } else if (lexer->lookahead == '!' || lexer->lookahead == '?') {
       tag_kind = 0;
       lexer->advance(lexer, false);
-    } else if (is_tag_start(lexer->lookahead)) {
+    } else if (is_tag_start(lexer->lookahead) || lexer->lookahead == '>') {
+      // Named nested tag or empty-name fragment (`<>`); the name char (if any)
+      // is consumed as in-tag content on the next iteration.
       tag_kind = 1;
       depth++;
     } else {

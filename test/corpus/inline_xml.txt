@@ -23,3 +23,32 @@ consume(<node />, after);
     (identifier)
     (InlineXml)
     (identifier)))
+
+====================
+inline XML fragments and special name starts
+====================
+
+var frag = <></>;
+var fragChildren = <><a /><b /></>;
+var dollarTag = <$Foo />;
+var nsTag = <ns:tag attr="v" />;
+var underscore = <_priv />;
+
+---
+
+(module
+  (EVars
+    (identifier)
+    (InlineXml))
+  (EVars
+    (identifier)
+    (InlineXml))
+  (EVars
+    (identifier)
+    (InlineXml))
+  (EVars
+    (identifier)
+    (InlineXml))
+  (EVars
+    (identifier)
+    (InlineXml)))

@@ -46,8 +46,10 @@ measure() {
 	clean=$(sed -E 's/.*successful parses: ([0-9]+).*/\1/' <<<"$summary")
 	failed=$(sed -E 's/.*failed parses: ([0-9]+).*/\1/' <<<"$summary")
 	percent=$(sed -E 's/.*success percentage: ([0-9.]+)%.*/\1/' <<<"$summary")
-	errors=$(grep -o '(ERROR' "$output_file" | wc -l)
-	missing=$(grep -o '(MISSING' "$output_file" | wc -l)
+	# grep exits 1 with no matches; guard it so a clean (zero-error) run records
+	# 0 instead of aborting under `set -o pipefail`.
+	errors=$({ grep -o '(ERROR' "$output_file" || true; } | wc -l)
+	missing=$({ grep -o '(MISSING' "$output_file" || true; } | wc -l)
 
 	printf '{"totalFiles":%s,"cleanFiles":%s,"failedFiles":%s,"successPercent":%s,"errorNodes":%s,"missingNodes":%s}' \
 		"$total" "$clean" "$failed" "$percent" "$errors" "$missing"
