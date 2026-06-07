@@ -2,14 +2,11 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdlib.h>
 
 enum TokenType {
   INLINE_XML,
 };
-
-// Longest root markup name we compare against. Real tag names are short; a name
-// longer than this simply never matches the root, which is harmless.
-#define MAX_NAME 256
 
 void *tree_sitter_haxe_external_scanner_create(void) {
   return NULL;
@@ -61,31 +58,59 @@ static bool is_whitespace(int32_t c) {
   return c == ' ' || c == '\t' || c == '\n' || c == '\r' || c == '\f';
 }
 
-// Read a maximal xml_name (possibly empty) into `buf`, advancing the lexer.
-// Returns the number of code points read (may exceed MAX_NAME, in which case
-// the stored prefix is truncated and the name will not compare equal to root).
-static int read_name(TSLexer *lexer, int32_t *buf, int *len) {
-  int n = 0;
+// Growable buffer of code points for the root tag name. The root name can be
+// arbitrarily long (Haxe imposes no length limit), so we do not cap it.
+typedef struct {
+  int32_t *data;
+  size_t len;
+  size_t cap;
+} NameBuf;
+
+static bool name_push(NameBuf *b, int32_t c) {
+  if (b->len == b->cap) {
+    size_t ncap = b->cap ? b->cap * 2 : 16;
+    int32_t *nd = (int32_t *)realloc(b->data, ncap * sizeof(int32_t));
+    if (!nd) return false;
+    b->data = nd;
+    b->cap = ncap;
+  }
+  b->data[b->len++] = c;
+  return true;
+}
+
+// Read the maximal xml_name at the current position into `out`, advancing the
+// lexer. A name may be empty (fragments). Returns false only on allocation
+// failure.
+static bool read_root_name(TSLexer *lexer, NameBuf *out) {
   if (is_name_start(lexer->lookahead)) {
-    if (n < MAX_NAME) buf[n] = lexer->lookahead;
-    n++;
+    if (!name_push(out, lexer->lookahead)) return false;
     lexer->advance(lexer, false);
     while (is_name_char(lexer->lookahead)) {
-      if (n < MAX_NAME) buf[n] = lexer->lookahead;
-      n++;
+      if (!name_push(out, lexer->lookahead)) return false;
       lexer->advance(lexer, false);
     }
   }
-  *len = n;
-  return n;
+  return true;
 }
 
-static bool name_equals(const int32_t *a, int alen, const int32_t *b, int blen) {
-  if (alen != blen || alen > MAX_NAME) return false;
-  for (int i = 0; i < alen; i++) {
-    if (a[i] != b[i]) return false;
+// Read the maximal xml_name at the current position, advancing the lexer, while
+// streaming-comparing it against `root`. Returns true iff the scanned name
+// equals the root name exactly (no buffering of the candidate needed, so the
+// candidate length is unbounded).
+static bool read_name_matches_root(TSLexer *lexer, const NameBuf *root) {
+  size_t idx = 0;
+  bool match = true;
+  if (is_name_start(lexer->lookahead)) {
+    int32_t c = lexer->lookahead;
+    if (idx >= root->len || c != root->data[idx]) match = false; else idx++;
+    lexer->advance(lexer, false);
+    while (is_name_char(lexer->lookahead)) {
+      c = lexer->lookahead;
+      if (idx >= root->len || c != root->data[idx]) match = false; else idx++;
+      lexer->advance(lexer, false);
+    }
   }
-  return true;
+  return match && idx == root->len;
 }
 
 // Bounded inline-XML markup, following HaxeFoundation/haxe src/syntax/lexer.ml
@@ -110,15 +135,12 @@ bool tree_sitter_haxe_external_scanner_scan(
   // or an empty-name fragment (`<>...</>`). This keeps stray `<` out of markup.
   if (!is_name_start(lexer->lookahead) && lexer->lookahead != '>') return false;
 
-  int32_t root[MAX_NAME];
-  int root_len = 0;
-  read_name(lexer, root, &root_len);
+  NameBuf root = {NULL, 0, 0};
+  bool result = false;
+  if (!read_root_name(lexer, &root)) goto done;
 
   int depth = 0;
-  bool in_open = root_len > 0; // a fragment (empty name) is never "in open"
-
-  int32_t name[MAX_NAME];
-  int name_len = 0;
+  bool in_open = root.len > 0; // a fragment (empty name) is never "in open"
 
   while (lexer->lookahead != 0) {
     int32_t c = lexer->lookahead;
@@ -128,14 +150,15 @@ bool tree_sitter_haxe_external_scanner_scan(
       if (lexer->lookahead == '/') {
         // Possible closing tag `</name>`.
         lexer->advance(lexer, false);
-        read_name(lexer, name, &name_len);
+        bool matches = read_name_matches_root(lexer, &root);
         if (lexer->lookahead == '>') {
           lexer->advance(lexer, false);
-          if (name_equals(name, name_len, root, root_len)) {
+          if (matches) {
             if (depth == 0) {
               lexer->mark_end(lexer);
               lexer->result_symbol = INLINE_XML;
-              return true;
+              result = true;
+              goto done;
             }
             depth--;
           } else {
@@ -146,8 +169,7 @@ bool tree_sitter_haxe_external_scanner_scan(
         continue;
       }
       // Possible opening tag `<name` (name may be empty).
-      read_name(lexer, name, &name_len);
-      if (name_equals(name, name_len, root, root_len)) {
+      if (read_name_matches_root(lexer, &root)) {
         depth++;
         in_open = true;
       } else {
@@ -164,7 +186,8 @@ bool tree_sitter_haxe_external_scanner_scan(
         if (depth < 0) {
           lexer->mark_end(lexer);
           lexer->result_symbol = INLINE_XML;
-          return true;
+          result = true;
+          goto done;
         }
         in_open = false;
       }
@@ -178,5 +201,7 @@ bool tree_sitter_haxe_external_scanner_scan(
   }
 
   // Reached EOF without closing the root tag: unterminated markup.
-  return false;
+done:
+  free(root.data);
+  return result;
 }
