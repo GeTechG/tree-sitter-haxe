@@ -8448,6 +8448,7 @@
   {
     "type": "comment",
     "named": true,
+    "extra": true,
     "fields": {},
     "children": {
       "multiple": false,
@@ -8498,6 +8499,7 @@
   {
     "type": "conditional",
     "named": true,
+    "extra": true,
     "fields": {
       "extends": {
         "multiple": true,
@@ -11483,11 +11485,11 @@
   },
   {
     "type": "default",
-    "named": true
+    "named": false
   },
   {
     "type": "default",
-    "named": false
+    "named": true
   },
   {
     "type": "do",
