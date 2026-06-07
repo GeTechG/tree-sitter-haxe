@@ -7,6 +7,10 @@ enum TokenType {
   INLINE_XML,
 };
 
+// Longest root markup name we compare against. Real tag names are short; a name
+// longer than this simply never matches the root, which is harmless.
+#define MAX_NAME 256
+
 void *tree_sitter_haxe_external_scanner_create(void) {
   return NULL;
 }
@@ -34,7 +38,7 @@ void tree_sitter_haxe_external_scanner_deserialize(
 // Mirror the Haxe lexer's `xml_name_start_char`
 // (HaxeFoundation/haxe src/syntax/lexer.ml): ASCII letters, '_', plus '$' and
 // ':' for JSX-style markup, and the XML 1.0 Unicode name-start ranges.
-static bool is_tag_start(int32_t c) {
+static bool is_name_start(int32_t c) {
   return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || c == '_' ||
          c == '$' || c == ':' ||
          (c >= 0xC0 && c <= 0xD6) || (c >= 0xD8 && c <= 0xF6) ||
@@ -45,10 +49,49 @@ static bool is_tag_start(int32_t c) {
          (c >= 0xFDF0 && c <= 0xFFFD) || (c >= 0x10000 && c <= 0xEFFFF);
 }
 
+// Mirror the Haxe lexer's `xml_name_char`: name-start chars plus '-', '.',
+// digits, and the XML 1.0 Unicode name-continuation ranges.
+static bool is_name_char(int32_t c) {
+  return is_name_start(c) || c == '-' || c == '.' || (c >= '0' && c <= '9') ||
+         c == 0xB7 || (c >= 0x0300 && c <= 0x036F) ||
+         (c >= 0x203F && c <= 0x2040);
+}
+
 static bool is_whitespace(int32_t c) {
   return c == ' ' || c == '\t' || c == '\n' || c == '\r' || c == '\f';
 }
 
+// Read a maximal xml_name (possibly empty) into `buf`, advancing the lexer.
+// Returns the number of code points read (may exceed MAX_NAME, in which case
+// the stored prefix is truncated and the name will not compare equal to root).
+static int read_name(TSLexer *lexer, int32_t *buf, int *len) {
+  int n = 0;
+  if (is_name_start(lexer->lookahead)) {
+    if (n < MAX_NAME) buf[n] = lexer->lookahead;
+    n++;
+    lexer->advance(lexer, false);
+    while (is_name_char(lexer->lookahead)) {
+      if (n < MAX_NAME) buf[n] = lexer->lookahead;
+      n++;
+      lexer->advance(lexer, false);
+    }
+  }
+  *len = n;
+  return n;
+}
+
+static bool name_equals(const int32_t *a, int alen, const int32_t *b, int blen) {
+  if (alen != blen || alen > MAX_NAME) return false;
+  for (int i = 0; i < alen; i++) {
+    if (a[i] != b[i]) return false;
+  }
+  return true;
+}
+
+// Bounded inline-XML markup, following HaxeFoundation/haxe src/syntax/lexer.ml
+// `lex_xml`/`not_xml`: depth tracks only repetitions of the *root* tag name,
+// there is intentionally no string/quote balancing, and `/>` self-closes only
+// while still inside the root opening tag (fragments cannot self-close).
 bool tree_sitter_haxe_external_scanner_scan(
   void *payload,
   TSLexer *lexer,
@@ -61,98 +104,79 @@ bool tree_sitter_haxe_external_scanner_scan(
     lexer->advance(lexer, true);
   }
   if (lexer->lookahead != '<') return false;
-
   lexer->advance(lexer, false);
-  // Haxe allows an empty markup name (`<>...</>` fragments), so '>' is a valid
-  // start in addition to any xml_name_start_char.
-  if (!is_tag_start(lexer->lookahead) && lexer->lookahead != '>') return false;
 
-  unsigned depth = 1;
-  unsigned brace_depth = 0;
-  int tag_kind = 1;
-  int32_t quote = 0;
-  bool in_tag = true;
+  // Only start markup when the root opening tag is plausible: a name-start char
+  // or an empty-name fragment (`<>...</>`). This keeps stray `<` out of markup.
+  if (!is_name_start(lexer->lookahead) && lexer->lookahead != '>') return false;
+
+  int32_t root[MAX_NAME];
+  int root_len = 0;
+  read_name(lexer, root, &root_len);
+
+  int depth = 0;
+  bool in_open = root_len > 0; // a fragment (empty name) is never "in open"
+
+  int32_t name[MAX_NAME];
+  int name_len = 0;
 
   while (lexer->lookahead != 0) {
     int32_t c = lexer->lookahead;
 
-    if (quote != 0) {
+    if (c == '<') {
       lexer->advance(lexer, false);
-      if (c == '\\' && lexer->lookahead != 0) {
+      if (lexer->lookahead == '/') {
+        // Possible closing tag `</name>`.
         lexer->advance(lexer, false);
-      } else if (c == quote) {
-        quote = 0;
+        read_name(lexer, name, &name_len);
+        if (lexer->lookahead == '>') {
+          lexer->advance(lexer, false);
+          if (name_equals(name, name_len, root, root_len)) {
+            if (depth == 0) {
+              lexer->mark_end(lexer);
+              lexer->result_symbol = INLINE_XML;
+              return true;
+            }
+            depth--;
+          } else {
+            in_open = false;
+          }
+        }
+        // A `</name` not followed by `>` is consumed as content.
+        continue;
+      }
+      // Possible opening tag `<name` (name may be empty).
+      read_name(lexer, name, &name_len);
+      if (name_equals(name, name_len, root, root_len)) {
+        depth++;
+        in_open = true;
+      } else {
+        in_open = false;
       }
       continue;
     }
 
-    if (in_tag) {
-      if (c == '"' || c == '\'') {
-        quote = c;
+    if (c == '/') {
+      lexer->advance(lexer, false);
+      if (lexer->lookahead == '>') {
         lexer->advance(lexer, false);
-        continue;
-      }
-      if (c == '{') {
-        brace_depth++;
-        lexer->advance(lexer, false);
-        continue;
-      }
-      if (c == '}' && brace_depth > 0) {
-        brace_depth--;
-        lexer->advance(lexer, false);
-        continue;
-      }
-      if (brace_depth == 0 && c == '/') {
-        lexer->advance(lexer, false);
-        if (lexer->lookahead == '>') {
-          lexer->advance(lexer, false);
-          if (tag_kind == 1) depth--;
-          if (depth == 0) {
-            lexer->mark_end(lexer);
-            lexer->result_symbol = INLINE_XML;
-            return true;
-          }
-          in_tag = false;
-        }
-        continue;
-      }
-      if (brace_depth == 0 && c == '>') {
-        lexer->advance(lexer, false);
-        if (tag_kind == -1) depth--;
-        if (depth == 0) {
+        if (in_open) depth--;
+        if (depth < 0) {
           lexer->mark_end(lexer);
           lexer->result_symbol = INLINE_XML;
           return true;
         }
-        in_tag = false;
-        continue;
+        in_open = false;
       }
-      lexer->advance(lexer, false);
+      // A lone `/` is content.
       continue;
     }
 
-    if (c != '<') {
-      lexer->advance(lexer, false);
-      continue;
-    }
-
+    // Lone `>`, quotes, braces, and any other character are plain content
+    // (Haxe performs no quote/brace balancing inside markup).
     lexer->advance(lexer, false);
-    if (lexer->lookahead == '/') {
-      tag_kind = -1;
-      lexer->advance(lexer, false);
-    } else if (lexer->lookahead == '!' || lexer->lookahead == '?') {
-      tag_kind = 0;
-      lexer->advance(lexer, false);
-    } else if (is_tag_start(lexer->lookahead) || lexer->lookahead == '>') {
-      // Named nested tag or empty-name fragment (`<>`); the name char (if any)
-      // is consumed as in-tag content on the next iteration.
-      tag_kind = 1;
-      depth++;
-    } else {
-      return false;
-    }
-    in_tag = true;
   }
 
+  // Reached EOF without closing the root tag: unterminated markup.
   return false;
 }

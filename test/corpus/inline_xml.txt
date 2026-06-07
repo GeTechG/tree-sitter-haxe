@@ -52,3 +52,36 @@ var underscore = <_priv />;
   (EVars
     (identifier)
     (InlineXml)))
+
+====================
+inline XML root-tag depth and no string balancing
+====================
+
+f(<xml><xml></xml></xml>);
+f(<xml><yml></xml>);
+f(<xml-xml></xml-xml>);
+f(<xml a=" </xml>);
+f(<xml a=// </xml>);
+var after = ok;
+
+---
+
+(module
+  (ECall
+    (identifier)
+    (InlineXml))
+  (ECall
+    (identifier)
+    (InlineXml))
+  (ECall
+    (identifier)
+    (InlineXml))
+  (ECall
+    (identifier)
+    (InlineXml))
+  (ECall
+    (identifier)
+    (InlineXml))
+  (EVars
+    (identifier)
+    (identifier)))
