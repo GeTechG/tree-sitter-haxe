@@ -1,0 +1,78 @@
+====================
+dotted metadata names
+====================
+
+@:flash.property class A {}
+@:forward.variance class B {}
+@:foo.default class C {}
+
+---
+
+(module
+  (MetaDataEntry
+    (identifier)
+    (identifier))
+  (ClassType
+    (type_name))
+  (MetaDataEntry
+    (identifier)
+    (identifier))
+  (ClassType
+    (type_name))
+  (MetaDataEntry
+    (identifier)
+    (identifier))
+  (ClassType
+    (type_name)))
+
+====================
+field modifiers and optional structure fields
+====================
+
+extern class Fields {
+  extern static var nativeField:Int;
+  abstract var abstractField:Int;
+  overload function overloaded():Void;
+}
+
+typedef Shape = {
+  var ?optionalVar:Int;
+  final ?optionalFinal:String;
+}
+
+---
+
+(module
+  (ClassType
+    (type_name)
+    (ClassVar
+      (identifier)
+      (ComplexType
+        (TypePath
+          (type_name))))
+    (ClassVar
+      (identifier)
+      (ComplexType
+        (TypePath
+          (type_name))))
+    (ClassMethod
+      (identifier)
+      (ComplexType
+        (TypePath
+          (type_name)))))
+  (DefType
+    (type_name)
+    (ComplexType
+      (TAnonymous
+        (ClassVar
+          (optional)
+          (identifier)
+          (ComplexType
+            (TypePath
+              (type_name))))
+        (ClassVar
+          (optional)
+          (identifier)
+          (ComplexType
+            (TypePath
+              (type_name))))))))

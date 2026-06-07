@@ -19,6 +19,9 @@
 ((Regexp) @injection.content
   (#set! injection.language "regex"))
 
+((InlineXml) @injection.content
+  (#set! injection.language "html"))
+
 (interpolation) @haxe
 
 (comment

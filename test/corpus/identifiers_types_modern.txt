@@ -1,0 +1,104 @@
+====================
+dollar identifiers
+====================
+
+class $Generated<$T> {
+  var $field:$Type;
+  function $method($arg:$Arg):$Return {
+    var $local = $arg;
+    return $local.$field;
+  }
+}
+
+---
+
+(module
+  (ClassType
+    (type_name)
+    (TypeParameter
+      (type_name))
+    (ClassVar
+      (identifier)
+      (ComplexType
+        (TypePath
+          (type_name))))
+    (ClassMethod
+      (identifier)
+      (FunctionArg
+        (identifier)
+        (ComplexType
+          (TypePath
+            (type_name))))
+      (ComplexType
+        (TypePath
+          (type_name)))
+      (EBlock
+        (EVars
+          (identifier)
+          (identifier))
+        (EReturn
+          (EField
+            (identifier)
+            (identifier)))))))
+
+====================
+abstract without underlying type
+====================
+
+abstract SocketHandle {}
+
+---
+
+(module
+  (AbstractType
+    (type_name)))
+
+====================
+type parameter constraint and default
+====================
+
+class Foo<T:EnumValue = Void> {}
+
+---
+
+(module
+  (ClassType
+    (type_name)
+    (TypeParameter
+      (type_name)
+      (ComplexType
+        (TypePath
+          (type_name)))
+      (ComplexType
+        (TypePath
+          (type_name))))))
+
+====================
+additional const type arguments
+====================
+
+typedef A = Const<null>;
+typedef B = Const<~/x/g>;
+typedef C = Const<!1>;
+
+---
+
+(module
+  (DefType
+    (type_name)
+    (ComplexType
+      (TypePath
+        (type_name)
+        (null))))
+  (DefType
+    (type_name)
+    (ComplexType
+      (TypePath
+        (type_name)
+        (Regexp))))
+  (DefType
+    (type_name)
+    (ComplexType
+      (TypePath
+        (type_name)
+        (Int)))))

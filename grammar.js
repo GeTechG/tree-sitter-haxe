@@ -85,6 +85,8 @@ const RESERVED_KEYWORDS = [
   "macro",
   "new",
   "null",
+  "operator",
+  "overload",
   "override",
   "package",
   "private",
@@ -107,6 +109,7 @@ const RESERVED_KEYWORDS = [
 export default grammar({
   name: "haxe",
   extras: ($) => [/\s+/, $.comment, $.conditional],
+  externals: ($) => [$.InlineXml],
   reserved: {
     global: (_) => RESERVED_KEYWORDS,
   },
@@ -129,6 +132,14 @@ export default grammar({
       $._conditional_body,
     ],
     [$.AbstractType, $.ClassType, $.DefType, $.EnumType],
+    [$.AbstractType, $.ClassType, $.ClassVar, $.ClassMethod],
+    [
+      $.AbstractType,
+      $.ClassType,
+      $.ClassVar,
+      $.ClassMethod,
+      $._conditional_body,
+    ],
     [$.AbstractType, $.ClassType, $._conditional_body],
     [$.AbstractType, $.ClassType],
     [$.AbstractType, $.DefType, $.EnumType, $._conditional_body],
@@ -137,6 +148,15 @@ export default grammar({
     [$.ClassType, $.ClassMethod],
     [$.ClassType, $.ClassVar, $.ClassMethod, $._conditional_body],
     [$.ClassType, $.ClassVar, $.ClassMethod],
+    [$.ClassType, $.ClassVar, $.ClassMethod, $.DefType, $.EnumType],
+    [
+      $.ClassType,
+      $.ClassVar,
+      $.ClassMethod,
+      $.DefType,
+      $.EnumType,
+      $._conditional_body,
+    ],
     [$.ClassType, $.DefType, $.EnumType, $._conditional_body],
     [$.ClassType, $.DefType, $.EnumType],
     [$.ClassType, $._conditional_body],
@@ -158,6 +178,7 @@ export default grammar({
     [$._Expr, $._expr_lhs],
     [$._block_or_expr, $._comprehension_body],
     [$._block_or_expr],
+    [$._base_type, $.optional],
     [$._class_field, $._conditional_body],
     [$._dot_path],
     [$._expr_atom, $._expr_value],
@@ -172,7 +193,14 @@ export default grammar({
     [$.import, $._dot_path],
     [$.ClassType, $.EnumType],
   ],
-  inline: ($) => [$._semicolon, $.visibility, $.rest, $._expr_postfix],
+  inline: ($) => [
+    $._semicolon,
+    $.visibility,
+    $.rest,
+    $._expr_postfix,
+    $._identifier,
+    $._type_name,
+  ],
   word: ($) => $.identifier,
   rules: {
     module: ($) =>
@@ -252,7 +280,14 @@ export default grammar({
         $.EBlock,
       ),
     _expr_atom: ($) =>
-      choice($._EConst, $._EParenthesis, $.EObjectDecl, $.EArrayDecl, $.ENew),
+      choice(
+        $._EConst,
+        $._EParenthesis,
+        $.EObjectDecl,
+        $.EArrayDecl,
+        $.ENew,
+        $.InlineXml,
+      ),
     _expr_meta: ($) =>
       choice(
         $.EArrowFunction,
@@ -275,7 +310,7 @@ export default grammar({
         $.EArrayDecl,
         $.ENew,
       ),
-    _expr_lhs: ($) => choice($.identifier, $.EField, $.EArray),
+    _expr_lhs: ($) => choice($._identifier, $.EField, $.EArray),
 
     _block_or_expr: ($) =>
       choice(
@@ -292,9 +327,10 @@ export default grammar({
             "callee",
             choice(
               $._EParenthesis,
-              // $.ECall, //TODO: should not be required
+              $.ECall,
+              $.EArray,
               $.EField,
-              $.identifier,
+              $._identifier,
               $.super,
             ),
           ),
@@ -309,8 +345,7 @@ export default grammar({
         seq(
           field("object", $._Expr),
           field("op", choice(".", "?.")),
-          optional("$"),
-          field("name", $.identifier),
+          field("name", $._identifier),
         ),
       ),
     EArray: ($) =>
@@ -329,7 +364,7 @@ export default grammar({
         $.null,
         $.this,
         $.super,
-        $.identifier,
+        $._identifier,
       ),
     _EParenthesis: ($) => prec(PREC.PRIMARY, seq("(", $._Expr, ")")),
     ENew: ($) =>
@@ -342,7 +377,7 @@ export default grammar({
         seq(
           choice(
             seq("(", ")"),
-            field("args", $.identifier),
+            field("args", $._identifier),
             seq(field("args", $._function_args), optional($._type_annotation)),
           ),
           "->",
@@ -356,9 +391,14 @@ export default grammar({
           choice("var", "final"),
           commaSep1(
             seq(
-              field("name", $.identifier),
+              field("name", $._identifier),
               optional(field("type", $._type_annotation)),
-              optional(seq("=", field("value", $._Expr))),
+              optional(
+                seq(
+                  "=",
+                  field("value", choice(prec(1, $.InlineXml), $._Expr)),
+                ),
+              ),
             ),
           ),
         ),
@@ -391,6 +431,9 @@ export default grammar({
             "<<=",
             ">>=",
             ">>>=",
+            "&&=",
+            "||=",
+            "??=",
           ],
           prec: PREC.ASSIGN,
           assoc: "right",
@@ -429,7 +472,7 @@ export default grammar({
         prec.right(
           PREC.UNARY,
           seq(
-            field("op", choice("++", "--", "+", "-", "!", "~")),
+            field("op", choice("++", "--", "+", "-", "!", "~", "...")),
             field("operand", $._expr_value),
           ),
         ),
@@ -448,7 +491,7 @@ export default grammar({
             seq(
               field("name", choice($.identifier, $.String)),
               ":",
-              field("value", $._expr_value),
+              field("value", $._Expr),
             ),
           ),
           "}",
@@ -610,7 +653,7 @@ export default grammar({
             seq(
               "catch",
               "(",
-              $.identifier,
+              field("name", $.identifier),
               optional($._type_annotation),
               ")",
               field("body", $._block_or_expr),
@@ -644,22 +687,24 @@ export default grammar({
     reification: ($) =>
       prec(
         PREC.UNARY,
-        seq(
-          "$",
-          choice(
-            token.immediate(/[a-zA-Z_][a-zA-Z0-9_]*/), // identifier
-            seq(token.immediate("{"), $._Expr, "}"),
-            seq(token.immediate("e{"), $._Expr, "}"),
-            seq(token.immediate("a{"), commaSep($._Expr), "}"),
-            seq(
-              token.immediate("b{"),
-              repeat(seq($._Expr, optional($._semicolon))),
-              "}",
+        choice(
+          seq(
+            "$",
+            choice(
+              token.immediate(/[a-zA-Z_][a-zA-Z0-9_]*/), // identifier
+              seq(token.immediate("{"), $._Expr, "}"),
             ),
-            seq(token.immediate("i{"), $.identifier, "}"),
-            seq(token.immediate("p{"), commaSep($.identifier), "}"),
-            seq(token.immediate("v{"), $._Expr, "}"),
           ),
+          seq(token(/\$e\{/), $._Expr, "}"),
+          seq(token(/\$a\{/), commaSep($._Expr), "}"),
+          seq(
+            token(/\$b\{/),
+            repeat(seq($._Expr, optional($._semicolon))),
+            "}",
+          ),
+          seq(token(/\$i\{/), $.identifier, "}"),
+          seq(token(/\$p\{/), commaSep($.identifier), "}"),
+          seq(token(/\$v\{/), $._Expr, "}"),
         ),
       ),
 
@@ -671,8 +716,8 @@ export default grammar({
     TypePath: ($) =>
       seq(
         repeat(seq(field("pack", $.package_name), ".")),
-        field("name", $.type_name),
-        optional(field("sub", prec.left(PREC.PRIMARY, seq(".", $.identifier)))),
+        field("name", $._type_name),
+        optional(field("sub", prec.left(PREC.PRIMARY, seq(".", $._identifier)))),
         optional(field("params", $._type_arguments)),
       ),
 
@@ -710,7 +755,7 @@ export default grammar({
     _ct_fun_param_named: ($) =>
       seq(
         optional($.optional),
-        field("name", $.identifier),
+        field("name", $._identifier),
         ":",
         field("type", $.ComplexType),
       ),
@@ -729,18 +774,16 @@ export default grammar({
     Field: ($) =>
       seq(
         optional($.optional),
-        field("name", $.identifier),
+        field("name", $._identifier),
         ":",
         field("type", $.ComplexType),
       ),
 
     TypeParameter: ($) =>
       seq(
-        field("name", $.type_name),
-        choice(
-          optional(seq(":", field("constraint", $.ComplexType))),
-          optional(seq("=", field("default", $.ComplexType))),
-        ),
+        field("name", $._type_name),
+        optional(seq(":", field("constraint", $.ComplexType))),
+        optional(seq("=", field("default", $.ComplexType))),
       ),
 
     MetaDataEntry: ($) =>
@@ -750,13 +793,18 @@ export default grammar({
           optional(token.immediate(":")),
           field(
             "name",
-            choice(
-              $.identifier,
-              ...RESERVED_KEYWORDS.map((kw) => alias(kw, $.identifier)),
+            seq(
+              $._metadata_name_component,
+              repeat(seq(token.immediate("."), $._metadata_name_component)),
             ),
           ),
           optional(seq("(", field("params", commaSep($._Expr)), ")")),
         ),
+      ),
+    _metadata_name_component: ($) =>
+      choice(
+        $.identifier,
+        ...RESERVED_KEYWORDS.map((kw) => alias(kw, $.identifier)),
       ),
 
     FunctionArg: ($) =>
@@ -767,7 +815,7 @@ export default grammar({
           repeat($.MetaDataEntry),
           optional($.optional),
           optional(field("rest", $.rest)),
-          field("name", $.identifier),
+          field("name", $._identifier),
           optional(field("type", $._type_annotation)),
           optional(seq("=", field("value", $._Expr))),
         ),
@@ -786,9 +834,7 @@ export default grammar({
         optional(repeat1(choice($.visibility, "enum"))),
         "abstract",
         $._type_decl_signature,
-        "(",
-        field("type", $.ComplexType),
-        ")",
+        optional(seq("(", field("type", $.ComplexType), ")")),
         repeat(
           choice(
             field("from", seq("from", $.ComplexType)),
@@ -822,10 +868,23 @@ export default grammar({
         PREC.ASSIGN,
         seq(
           optional(
-            repeat1(choice($.visibility, "dynamic", "inline", "static")),
+            repeat1(
+              choice(
+                $.visibility,
+                "abstract",
+                "dynamic",
+                "extern",
+                "inline",
+                "macro",
+                "overload",
+                "override",
+                "static",
+              ),
+            ),
           ),
           choice("var", "final"),
-          field("name", $.identifier),
+          optional($.optional),
+          field("name", $._identifier),
           optional($.property_accessor),
           optional($._type_annotation),
           optional(seq("=", $._Expr)),
@@ -862,7 +921,10 @@ export default grammar({
                 "dynamic",
                 "inline",
                 "override",
+                "abstract",
+                "extern",
                 "final",
+                "overload",
                 "static",
               ),
             ),
@@ -904,7 +966,7 @@ export default grammar({
         "function",
         optional(
           seq(
-            field("name", choice($.identifier, alias("new", $.identifier))),
+            field("name", choice($._identifier, alias("new", $.identifier))),
             optional(field("params", $._type_params)),
           ),
         ),
@@ -914,22 +976,33 @@ export default grammar({
       ),
 
     _type_decl_signature: ($) =>
-      seq(field("name", $.type_name), optional($._type_params)),
+      seq(field("name", $._type_name), optional($._type_params)),
 
     // ------------------------------------------------------------------------
 
     Int: (_) =>
       choice(
+        /0x[a-fA-F\d][a-fA-F\d_]*_?[iu]\d+/,
         /0x[a-fA-F\d][a-fA-F\d_]*/,
+        /0b[01][01_]*_?[iu]\d+/,
         /0b[01][01_]*/,
+        /0o[0-7][0-7_]*_?[iu]\d+/,
         /0o[0-7][0-7_]*/,
+        /\d[\d_]*_?[iu]\d+/,
         /\d[\d_]*/,
       ),
 
     Float: (_) =>
       choice(
-        /\d[\d_]*\.\d[\d_]*([ee][+-]?\d[\d_]*)?/,
-        /\d[\d_]+[ee][+-]?\d[\d_]*/,
+        /\d[\d_]*\.\d[\d_]*([eE][+-]?\d[\d_]*)?_?f\d+/,
+        /\d[\d_]*\.\d[\d_]*([eE][+-]?\d[\d_]*)?/,
+        /\d[\d_]*\.[eE][+-]?\d[\d_]*_?f\d+/,
+        /\d[\d_]*\.[eE][+-]?\d[\d_]*/,
+        /\.[\d_]+([eE][+-]?\d[\d_]*)?_?f\d+/,
+        /\.[\d_]+([eE][+-]?\d[\d_]*)?/,
+        /\d[\d_]+[eE][+-]?\d[\d_]*_?f\d+/,
+        /\d[\d_]+[eE][+-]?\d[\d_]*/,
+        /\d[\d_]*_?f\d+/,
       ),
 
     String: ($) =>
@@ -995,8 +1068,11 @@ export default grammar({
         $.String,
         $.true,
         $.false,
+        $.null,
+        $.Regexp,
         $.EArrayDecl,
         seq("-", choice($.Int, $.Float)),
+        seq(choice("!", "~"), choice($.Int, $.Float, $.String)),
       ),
 
     _function_args: ($) =>
@@ -1007,11 +1083,16 @@ export default grammar({
     visibility: (_) => choice("public", "private"),
 
     identifier: (_) => /[a-zA-Z_][a-zA-Z0-9_]*/,
+    dollar_identifier: (_) => /\$[a-zA-Z_][a-zA-Z0-9_]*/,
+    _identifier: ($) =>
+      choice($.identifier, alias($.dollar_identifier, $.identifier)),
     package_name: (_) => /[a-z_][a-zA-Z0-9_]*/,
     // Higher lexical precedence so an uppercase word prefers `type_name` over
     // `identifier` in states where both are valid (e.g. unnamed function-type
     // args `(Int, String) -> T`); lowercase words still fall back to identifier.
     type_name: (_) => token(prec(1, /[A-Z][a-zA-Z0-9_]*/)),
+    _type_name: ($) =>
+      choice($.type_name, alias($.dollar_identifier, $.type_name)),
 
     optional: (_) => "?",
     wildcard: (_) => "*",

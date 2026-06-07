@@ -1,0 +1,25 @@
+====================
+inline XML expressions
+====================
+
+var simple = <xml />;
+var nested = <root><child value="x" /></root>;
+var withExpr = <something onClick={e -> e.preventDefault()} />;
+consume(<node />, after);
+
+---
+
+(module
+  (EVars
+    (identifier)
+    (InlineXml))
+  (EVars
+    (identifier)
+    (InlineXml))
+  (EVars
+    (identifier)
+    (InlineXml))
+  (ECall
+    (identifier)
+    (InlineXml)
+    (identifier)))

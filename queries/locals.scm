@@ -1,11 +1,31 @@
+; Scopes ----------------------------------------------------------------------
+
 [
   (EBlock)
   (EFunction)
-] @scope @local.scope
+  (EArrowFunction)
+  (EFor)
+  (ETry)
+] @local.scope
+
+; Definitions ------------------------------------------------------------------
 
 (FunctionArg
-  name: (identifier) @definition.parameter)
+  name: (identifier) @local.definition)
 
-; (EVars name: (identifier) @local.definition)
-; (EBlock (identifier)) @local.reference
+(EVars
+  name: (identifier) @local.definition)
+
+(EFor
+  var: (identifier) @local.definition)
+(EFor
+  key: (identifier) @local.definition)
+(EFor
+  value: (identifier) @local.definition)
+
+(ETry
+  name: (identifier) @local.definition)
+
+; References -------------------------------------------------------------------
+
 (identifier) @local.reference

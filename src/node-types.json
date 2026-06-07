@@ -43,7 +43,7 @@
       },
       "type": {
         "multiple": false,
-        "required": true,
+        "required": false,
         "types": [
           {
             "type": "ComplexType",
@@ -215,6 +215,10 @@
           },
           {
             "type": "Float",
+            "named": true
+          },
+          {
+            "type": "InlineXml",
             "named": true
           },
           {
@@ -539,6 +543,10 @@
           "named": true
         },
         {
+          "type": "InlineXml",
+          "named": true
+        },
+        {
           "type": "Int",
           "named": true
         },
@@ -564,6 +572,10 @@
         },
         {
           "type": "null",
+          "named": true
+        },
+        {
+          "type": "optional",
           "named": true
         },
         {
@@ -890,6 +902,10 @@
             "named": true
           },
           {
+            "type": "InlineXml",
+            "named": true
+          },
+          {
             "type": "Int",
             "named": true
           },
@@ -1064,6 +1080,10 @@
             "named": true
           },
           {
+            "type": "InlineXml",
+            "named": true
+          },
+          {
             "type": "Int",
             "named": true
           },
@@ -1233,6 +1253,10 @@
         },
         {
           "type": "Float",
+          "named": true
+        },
+        {
+          "type": "InlineXml",
           "named": true
         },
         {
@@ -1445,6 +1469,10 @@
             "named": true
           },
           {
+            "type": "InlineXml",
+            "named": true
+          },
+          {
             "type": "Int",
             "named": true
           },
@@ -1635,6 +1663,10 @@
             "named": true
           },
           {
+            "type": "InlineXml",
+            "named": true
+          },
+          {
             "type": "Int",
             "named": true
           },
@@ -1710,6 +1742,10 @@
           },
           {
             "type": "&&",
+            "named": false
+          },
+          {
+            "type": "&&=",
             "named": false
           },
           {
@@ -1809,6 +1845,10 @@
             "named": false
           },
           {
+            "type": "??=",
+            "named": false
+          },
+          {
             "type": "^",
             "named": false
           },
@@ -1834,6 +1874,10 @@
           },
           {
             "type": "||",
+            "named": false
+          },
+          {
+            "type": "||=",
             "named": false
           }
         ]
@@ -1956,6 +2000,10 @@
           },
           {
             "type": "Float",
+            "named": true
+          },
+          {
+            "type": "InlineXml",
             "named": true
           },
           {
@@ -2132,6 +2180,10 @@
         },
         {
           "type": "Float",
+          "named": true
+        },
+        {
+          "type": "InlineXml",
           "named": true
         },
         {
@@ -2323,6 +2375,10 @@
             "named": true
           },
           {
+            "type": "InlineXml",
+            "named": true
+          },
+          {
             "type": "Int",
             "named": true
           },
@@ -2494,6 +2550,10 @@
           },
           {
             "type": "Float",
+            "named": true
+          },
+          {
+            "type": "InlineXml",
             "named": true
           },
           {
@@ -2674,6 +2734,10 @@
           },
           {
             "type": "Float",
+            "named": true
+          },
+          {
+            "type": "InlineXml",
             "named": true
           },
           {
@@ -2864,6 +2928,10 @@
           },
           {
             "type": "Float",
+            "named": true
+          },
+          {
+            "type": "InlineXml",
             "named": true
           },
           {
@@ -3072,6 +3140,10 @@
             "named": true
           },
           {
+            "type": "InlineXml",
+            "named": true
+          },
+          {
             "type": "Int",
             "named": true
           },
@@ -3270,6 +3342,10 @@
             "named": true
           },
           {
+            "type": "InlineXml",
+            "named": true
+          },
+          {
             "type": "Int",
             "named": true
           },
@@ -3441,6 +3517,10 @@
           },
           {
             "type": "Float",
+            "named": true
+          },
+          {
+            "type": "InlineXml",
             "named": true
           },
           {
@@ -3669,6 +3749,10 @@
           },
           {
             "type": "Float",
+            "named": true
+          },
+          {
+            "type": "InlineXml",
             "named": true
           },
           {
@@ -3908,6 +3992,10 @@
             "named": true
           },
           {
+            "type": "InlineXml",
+            "named": true
+          },
+          {
             "type": "Int",
             "named": true
           },
@@ -4086,6 +4174,10 @@
             "named": true
           },
           {
+            "type": "InlineXml",
+            "named": true
+          },
+          {
             "type": "Int",
             "named": true
           },
@@ -4261,6 +4353,10 @@
           },
           {
             "type": "Float",
+            "named": true
+          },
+          {
+            "type": "InlineXml",
             "named": true
           },
           {
@@ -4444,6 +4540,10 @@
             "named": true
           },
           {
+            "type": "InlineXml",
+            "named": true
+          },
+          {
             "type": "Int",
             "named": true
           },
@@ -4623,6 +4723,10 @@
         },
         {
           "type": "Float",
+          "named": true
+        },
+        {
+          "type": "InlineXml",
           "named": true
         },
         {
@@ -4823,6 +4927,10 @@
             "named": true
           },
           {
+            "type": "InlineXml",
+            "named": true
+          },
+          {
             "type": "Int",
             "named": true
           },
@@ -4992,6 +5100,10 @@
         },
         {
           "type": "Float",
+          "named": true
+        },
+        {
+          "type": "InlineXml",
           "named": true
         },
         {
@@ -5194,6 +5306,10 @@
             "named": true
           },
           {
+            "type": "InlineXml",
+            "named": true
+          },
+          {
             "type": "Int",
             "named": true
           },
@@ -5374,6 +5490,10 @@
             "named": true
           },
           {
+            "type": "InlineXml",
+            "named": true
+          },
+          {
             "type": "Int",
             "named": true
           },
@@ -5548,6 +5668,10 @@
             "named": true
           },
           {
+            "type": "InlineXml",
+            "named": true
+          },
+          {
             "type": "Int",
             "named": true
           },
@@ -5719,6 +5843,10 @@
           },
           {
             "type": "Float",
+            "named": true
+          },
+          {
+            "type": "InlineXml",
             "named": true
           },
           {
@@ -5899,6 +6027,10 @@
           },
           {
             "type": "Float",
+            "named": true
+          },
+          {
+            "type": "InlineXml",
             "named": true
           },
           {
@@ -6086,6 +6218,10 @@
             "named": true
           },
           {
+            "type": "InlineXml",
+            "named": true
+          },
+          {
             "type": "Int",
             "named": true
           },
@@ -6139,6 +6275,16 @@
           }
         ]
       },
+      "name": {
+        "multiple": true,
+        "required": true,
+        "types": [
+          {
+            "type": "identifier",
+            "named": true
+          }
+        ]
+      },
       "type": {
         "multiple": true,
         "required": false,
@@ -6151,7 +6297,7 @@
       }
     },
     "children": {
-      "multiple": true,
+      "multiple": false,
       "required": true,
       "types": [
         {
@@ -6263,6 +6409,10 @@
           "named": true
         },
         {
+          "type": "InlineXml",
+          "named": true
+        },
+        {
           "type": "Int",
           "named": true
         },
@@ -6343,6 +6493,10 @@
           },
           {
             "type": "--",
+            "named": false
+          },
+          {
+            "type": "...",
             "named": false
           },
           {
@@ -6469,6 +6623,10 @@
           },
           {
             "type": "Float",
+            "named": true
+          },
+          {
+            "type": "InlineXml",
             "named": true
           },
           {
@@ -6641,6 +6799,10 @@
         },
         {
           "type": "Float",
+          "named": true
+        },
+        {
+          "type": "InlineXml",
           "named": true
         },
         {
@@ -6847,6 +7009,10 @@
             "named": true
           },
           {
+            "type": "InlineXml",
+            "named": true
+          },
+          {
             "type": "Int",
             "named": true
           },
@@ -7031,6 +7197,10 @@
             "named": true
           },
           {
+            "type": "InlineXml",
+            "named": true
+          },
+          {
             "type": "Int",
             "named": true
           },
@@ -7202,6 +7372,10 @@
           },
           {
             "type": "Float",
+            "named": true
+          },
+          {
+            "type": "InlineXml",
             "named": true
           },
           {
@@ -7560,6 +7734,10 @@
             "named": true
           },
           {
+            "type": "InlineXml",
+            "named": true
+          },
+          {
             "type": "Int",
             "named": true
           },
@@ -7639,9 +7817,13 @@
     "named": true,
     "fields": {
       "name": {
-        "multiple": false,
+        "multiple": true,
         "required": true,
         "types": [
+          {
+            "type": ".",
+            "named": false
+          },
           {
             "type": "identifier",
             "named": true
@@ -7770,6 +7952,10 @@
           },
           {
             "type": "Float",
+            "named": true
+          },
+          {
+            "type": "InlineXml",
             "named": true
           },
           {
@@ -7959,6 +8145,10 @@
         "required": false,
         "types": [
           {
+            "type": "!",
+            "named": false
+          },
+          {
             "type": ",",
             "named": false
           },
@@ -7991,6 +8181,10 @@
             "named": true
           },
           {
+            "type": "Regexp",
+            "named": true
+          },
+          {
             "type": "String",
             "named": true
           },
@@ -7999,8 +8193,16 @@
             "named": true
           },
           {
+            "type": "null",
+            "named": true
+          },
+          {
             "type": "true",
             "named": true
+          },
+          {
+            "type": "~",
+            "named": false
           }
         ]
       },
@@ -8236,6 +8438,10 @@
         },
         {
           "type": "Float",
+          "named": true
+        },
+        {
+          "type": "InlineXml",
           "named": true
         },
         {
@@ -8477,6 +8683,10 @@
           "named": true
         },
         {
+          "type": "InlineXml",
+          "named": true
+        },
+        {
           "type": "Int",
           "named": true
         },
@@ -8696,6 +8906,10 @@
         },
         {
           "type": "Float",
+          "named": true
+        },
+        {
+          "type": "InlineXml",
           "named": true
         },
         {
@@ -8986,6 +9200,10 @@
           "named": true
         },
         {
+          "type": "InlineXml",
+          "named": true
+        },
+        {
           "type": "Int",
           "named": true
         },
@@ -9173,6 +9391,10 @@
         },
         {
           "type": "Float",
+          "named": true
+        },
+        {
+          "type": "InlineXml",
           "named": true
         },
         {
@@ -9372,6 +9594,10 @@
         },
         {
           "type": "Float",
+          "named": true
+        },
+        {
+          "type": "InlineXml",
           "named": true
         },
         {
@@ -9653,6 +9879,10 @@
           "named": true
         },
         {
+          "type": "InlineXml",
+          "named": true
+        },
+        {
           "type": "Int",
           "named": true
         },
@@ -9841,6 +10071,10 @@
             "named": true
           },
           {
+            "type": "InlineXml",
+            "named": true
+          },
+          {
             "type": "Int",
             "named": true
           },
@@ -10012,6 +10246,10 @@
           },
           {
             "type": "Float",
+            "named": true
+          },
+          {
+            "type": "InlineXml",
             "named": true
           },
           {
@@ -10190,6 +10428,10 @@
           },
           {
             "type": "Float",
+            "named": true
+          },
+          {
+            "type": "InlineXml",
             "named": true
           },
           {
@@ -10374,6 +10616,10 @@
           },
           {
             "type": "Float",
+            "named": true
+          },
+          {
+            "type": "InlineXml",
             "named": true
           },
           {
@@ -10567,6 +10813,10 @@
             "named": true
           },
           {
+            "type": "InlineXml",
+            "named": true
+          },
+          {
             "type": "Int",
             "named": true
           },
@@ -10724,6 +10974,10 @@
     "named": false
   },
   {
+    "type": "&&=",
+    "named": false
+  },
+  {
     "type": "&=",
     "named": false
   },
@@ -10868,8 +11122,16 @@
     "named": false
   },
   {
+    "type": "??=",
+    "named": false
+  },
+  {
     "type": "@",
     "named": false
+  },
+  {
+    "type": "InlineXml",
+    "named": true
   },
   {
     "type": "[",
@@ -10896,19 +11158,11 @@
     "named": false
   },
   {
-    "type": "a{",
-    "named": false
-  },
-  {
     "type": "block_comment",
     "named": true
   },
   {
     "type": "break",
-    "named": false
-  },
-  {
-    "type": "b{",
     "named": false
   },
   {
@@ -10976,10 +11230,6 @@
     "named": false
   },
   {
-    "type": "e{",
-    "named": false
-  },
-  {
     "type": "false",
     "named": false
   },
@@ -11040,10 +11290,6 @@
     "named": false
   },
   {
-    "type": "i{",
-    "named": false
-  },
-  {
     "type": "line_comment",
     "named": true
   },
@@ -11064,6 +11310,10 @@
     "named": false
   },
   {
+    "type": "overload",
+    "named": false
+  },
+  {
     "type": "override",
     "named": false
   },
@@ -11081,10 +11331,6 @@
   },
   {
     "type": "public",
-    "named": false
-  },
-  {
-    "type": "p{",
     "named": false
   },
   {
@@ -11148,10 +11394,6 @@
     "named": false
   },
   {
-    "type": "v{",
-    "named": false
-  },
-  {
     "type": "while",
     "named": false
   },
@@ -11173,6 +11415,10 @@
   },
   {
     "type": "||",
+    "named": false
+  },
+  {
+    "type": "||=",
     "named": false
   },
   {

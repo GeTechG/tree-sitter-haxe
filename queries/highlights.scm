@@ -60,6 +60,7 @@
   "dynamic"
   "macro"
   "extern"
+  "overload"
 ] @keyword.modifier
 (ClassType "abstract" @keyword.modifier)
 
@@ -69,6 +70,7 @@
 (String (fragment) @string)
 (String (interpolation) @string.special)
 (Regexp) @string.regex
+(InlineXml) @string.special
 
 (true) @boolean
 (false) @boolean
@@ -184,11 +186,16 @@
 
 ; Metadata --------------------------------------------------------------------
 
+; Metadata path components, including dotted paths (e.g. @:flash.property).
+; Direct identifier children are the path; the params block below overrides
+; any bare-identifier argument back to @attribute.parameter.
+(MetaDataEntry
+  (identifier) @attribute)
+
 (MetaDataEntry
   [
     "@" @attribute
     ":" @attribute
-    name: (identifier) @attribute
     params: (_) @attribute.parameter
     "(" @punctuation.bracket
     ")" @punctuation.bracket
