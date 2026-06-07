@@ -1,20 +1,21 @@
 {
   "haxeRevision": "94673be33d7b4938c59acd39314d3a6e02674724",
-  "recordedFromGrammarRevision": "ebcaa4efbece6d258bcd94da0af8fe5466a32815",
+  "recordedFromGrammarRevision": "f18fc0234abcd969e57fcb893dfcf981bd1f1a53",
+  "note": "Achieved-result floor: the std gate fails if cleanFiles drops or std error/missing nodes rise below/above these accepted values. Update only when an intentional improvement raises them.",
   "std": {
     "totalFiles": 2583,
-    "cleanFiles": 1718,
-    "failedFiles": 865,
-    "successPercent": 66.51,
-    "errorNodes": 5104,
-    "missingNodes": 36
+    "cleanFiles": 2290,
+    "failedFiles": 293,
+    "successPercent": 88.66,
+    "errorNodes": 1559,
+    "missingNodes": 19
   },
   "repository": {
     "totalFiles": 5862,
-    "cleanFiles": 4428,
-    "failedFiles": 1434,
-    "successPercent": 75.54,
-    "errorNodes": 7280,
-    "missingNodes": 104
+    "cleanFiles": 5149,
+    "failedFiles": 713,
+    "successPercent": 87.84,
+    "errorNodes": 2959,
+    "missingNodes": 75
   }
 }
