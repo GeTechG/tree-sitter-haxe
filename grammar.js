@@ -114,6 +114,11 @@ export default grammar({
     global: (_) => RESERVED_KEYWORDS,
   },
   conflicts: ($) => [
+    // A declarator in a var statement is ambiguous with itself: at `=` the
+    // parser can take the initializer, or stop and let the enclosing EVars be
+    // reduced so that `=` becomes an EBinop assignment. GLR has to carry both
+    // or the third and later declarator in `var a = 1, b = 2, c = 3;` is lost.
+    [$._var_declarator],
     [
       $.AbstractType,
       $.ClassMethod,
@@ -391,18 +396,15 @@ export default grammar({
         PREC.ASSIGN,
         seq(
           choice("var", "final"),
-          commaSep1(
-            seq(
-              field("name", $._identifier),
-              optional(field("type", $._type_annotation)),
-              optional(
-                seq(
-                  "=",
-                  field("value", choice(prec(1, $.InlineXml), $._Expr)),
-                ),
-              ),
-            ),
-          ),
+          commaSep1($._var_declarator),
+        ),
+      ),
+    _var_declarator: ($) =>
+      seq(
+        field("name", $._identifier),
+        optional(field("type", $._type_annotation)),
+        optional(
+          seq("=", field("value", choice(prec(1, $.InlineXml), $._Expr))),
         ),
       ),
     ETernary: ($) =>
@@ -489,11 +491,18 @@ export default grammar({
         -1,
         seq(
           "{",
-          commaSep(
+          // A trailing comma after the last field is legal Haxe, and is what
+          // multi-line configuration objects are usually written with.
+          optional(
             seq(
-              field("name", choice($.identifier, $.String)),
-              ":",
-              field("value", $._Expr),
+              commaSep1(
+                seq(
+                  field("name", choice($.identifier, $.String)),
+                  ":",
+                  field("value", $._Expr),
+                ),
+              ),
+              optional(","),
             ),
           ),
           "}",
@@ -506,7 +515,10 @@ export default grammar({
           "[",
           optional(
             choice(
-              commaSep($._Expr),
+              // Haxe permits a trailing comma after the last element,
+              // `["a", "b",]`, which hand-maintained tables rely on so that
+              // every line can end the same way.
+              seq(commaSep1($._Expr), optional(",")),
               alias($._comprehension_for, $.EFor),
               $.EWhile,
             ),
@@ -1022,8 +1034,8 @@ export default grammar({
         /\d[\d_]*\.[eE][+-]?\d[\d_]*/,
         /\.[\d_]+([eE][+-]?\d[\d_]*)?_?f\d+/,
         /\.[\d_]+([eE][+-]?\d[\d_]*)?/,
-        /\d[\d_]+[eE][+-]?\d[\d_]*_?f\d+/,
-        /\d[\d_]+[eE][+-]?\d[\d_]*/,
+        /\d[\d_]*[eE][+-]?\d[\d_]*_?f\d+/,
+        /\d[\d_]*[eE][+-]?\d[\d_]*/,
         /\d[\d_]*_?f\d+/,
         // Trailing-dot float `N.` (e.g. `0.`, `1000.`). An external token so the
         // lexer can look past the dot and decline when the next char begins an

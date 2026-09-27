@@ -235,12 +235,11 @@ class C { function f() { var x = 0., y = 1000. + 2.; } }
     (ClassMethod
       name: (identifier)
       body: (EBlock
-        (EBinop
-          left: (EVars
-            name: (identifier)
-            value: (Float)
-            name: (identifier))
-          right: (EBinop
+        (EVars
+          name: (identifier)
+          value: (Float)
+          name: (identifier)
+          value: (EBinop
             left: (Float)
             right: (Float)))))))
 
@@ -308,3 +307,52 @@ class C { function f() { trace('$p = $$x'); } }
             (fragment)
             (escape_sequence)
             (fragment)))))))
+
+
+
+=================================
+float literals with a leading dot
+=================================
+
+.5;
+.125e3;
+
+---
+
+(module
+  (Float)
+  (Float))
+
+
+=========================================
+float literals with an uppercase exponent
+=========================================
+
+1.0E5;
+2e10;
+1E-3;
+
+---
+
+(module
+  (Float)
+  (Float)
+  (Float))
+
+=========================================
+float with a single digit before exponent
+=========================================
+
+class C { var a = 1e5; var b = 1E5; }
+
+---
+
+(module
+  (ClassType
+    name: (type_name)
+    (ClassVar
+      name: (identifier)
+      (Float))
+    (ClassVar
+      name: (identifier)
+      (Float))))

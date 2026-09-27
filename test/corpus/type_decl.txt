@@ -407,3 +407,50 @@ metadata extern enum abstract declaration
       name: (identifier)
       (String
         (fragment)))))
+
+
+
+=======================================
+function type with an optional argument
+=======================================
+
+typedef F = MBitmap->?Object->Void;
+
+---
+
+(module
+  (DefType
+    name: (type_name)
+    type: (ComplexType
+      arg: (TypePath
+        name: (type_name))
+      ret: (ComplexType
+        arg: (TypePath
+          name: (type_name))
+        ret: (ComplexType
+          (TypePath
+            name: (type_name)))))))
+
+
+====================================
+class with implements before extends
+====================================
+
+class ArrayOrItemInt implements IArrayOrItem<Int> extends ArrayOrItem<Int> {}
+
+---
+
+(module
+  (ClassType
+    name: (type_name)
+    implements: (TypePath
+      name: (type_name)
+      params: (ComplexType
+        (TypePath
+          name: (type_name))))
+    extends: (TypePath
+      name: (type_name)
+      params: (ComplexType
+        (TypePath
+          name: (type_name))))))
+
