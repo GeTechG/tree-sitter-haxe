@@ -777,14 +777,24 @@ export default grammar({
     _catches: ($) => tryTail($, $._catch),
     _catch_conditionals: ($) =>
       tryTail($, alias($._catch_conditional, $.conditional)),
-    // A conditional after a `try` or a catch, holding catches of that `try`.
-    // One whose first branch starts with a catch belongs to the `try`; any
-    // other one follows the finished `try`, unless a catch comes after it
-    // (`try {} #if x #else catch (e) {} #end catch (e) {}`).
+    // A conditional after a `try` or a catch belongs to that `try` when its
+    // first branch starts with a catch, when a later branch is made of
+    // catches, or when a catch comes after it; any other one follows the
+    // finished `try`.
     _catch_conditional: ($) => {
       const rest = [
-        repeat($.conditional_elseif),
-        optional($.conditional_else),
+        repeat(
+          choice(
+            $.conditional_elseif,
+            alias($._catch_conditional_elseif, $.conditional_elseif),
+          ),
+        ),
+        optional(
+          choice(
+            $.conditional_else,
+            alias($._catch_conditional_else, $.conditional_else),
+          ),
+        ),
         $.conditional_end,
       ];
       const head = ["#if", $.compile_condition];
@@ -793,6 +803,15 @@ export default grammar({
         prec.dynamic(-1, seq(...head, ...rest)),
       );
     },
+    // The static precedence takes a catch for this rule rather than for the
+    // general branch; a branch with anything else leaves the other parse.
+    _catch_conditional_elseif: ($) =>
+      prec.dynamic(
+        2,
+        seq("#elseif", $.compile_condition, repeat1(prec(1, $._catch))),
+      ),
+    _catch_conditional_else: ($) =>
+      prec.dynamic(2, seq("#else", repeat1(prec(1, $._catch)))),
     _catch: ($) =>
       seq(
         "catch",

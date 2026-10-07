@@ -513,6 +513,8 @@ try {} catch (e) {} #if x catch (e) {} #else b(); #end
 try {} catch (e) {} #if x b(); #end
 try {} #if x #else catch (e) {} #end catch (e) {}
 try {} #if x #else b(); #end
+try {} #if x #else catch (e) {} #end
+try {} #if x #elseif y catch (e) {} #end
 
 ---
 
@@ -575,4 +577,24 @@ try {} #if x #else b(); #end
     (conditional_else
       (ECall
         (identifier)))
-    (conditional_end)))
+    (conditional_end))
+  (ETry
+    (EBlock)
+    (conditional
+      (compile_condition
+        (identifier))
+      (conditional_else
+        (identifier)
+        (EBlock))
+      (conditional_end)))
+  (ETry
+    (EBlock)
+    (conditional
+      (compile_condition
+        (identifier))
+      (conditional_elseif
+        (compile_condition
+          (identifier))
+        (identifier)
+        (EBlock))
+      (conditional_end))))

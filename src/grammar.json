@@ -3343,16 +3343,44 @@
               {
                 "type": "REPEAT",
                 "content": {
-                  "type": "SYMBOL",
-                  "name": "conditional_elseif"
+                  "type": "CHOICE",
+                  "members": [
+                    {
+                      "type": "SYMBOL",
+                      "name": "conditional_elseif"
+                    },
+                    {
+                      "type": "ALIAS",
+                      "content": {
+                        "type": "SYMBOL",
+                        "name": "_catch_conditional_elseif"
+                      },
+                      "named": true,
+                      "value": "conditional_elseif"
+                    }
+                  ]
                 }
               },
               {
                 "type": "CHOICE",
                 "members": [
                   {
-                    "type": "SYMBOL",
-                    "name": "conditional_else"
+                    "type": "CHOICE",
+                    "members": [
+                      {
+                        "type": "SYMBOL",
+                        "name": "conditional_else"
+                      },
+                      {
+                        "type": "ALIAS",
+                        "content": {
+                          "type": "SYMBOL",
+                          "name": "_catch_conditional_else"
+                        },
+                        "named": true,
+                        "value": "conditional_else"
+                      }
+                    ]
                   },
                   {
                     "type": "BLANK"
@@ -3383,16 +3411,44 @@
               {
                 "type": "REPEAT",
                 "content": {
-                  "type": "SYMBOL",
-                  "name": "conditional_elseif"
+                  "type": "CHOICE",
+                  "members": [
+                    {
+                      "type": "SYMBOL",
+                      "name": "conditional_elseif"
+                    },
+                    {
+                      "type": "ALIAS",
+                      "content": {
+                        "type": "SYMBOL",
+                        "name": "_catch_conditional_elseif"
+                      },
+                      "named": true,
+                      "value": "conditional_elseif"
+                    }
+                  ]
                 }
               },
               {
                 "type": "CHOICE",
                 "members": [
                   {
-                    "type": "SYMBOL",
-                    "name": "conditional_else"
+                    "type": "CHOICE",
+                    "members": [
+                      {
+                        "type": "SYMBOL",
+                        "name": "conditional_else"
+                      },
+                      {
+                        "type": "ALIAS",
+                        "content": {
+                          "type": "SYMBOL",
+                          "name": "_catch_conditional_else"
+                        },
+                        "named": true,
+                        "value": "conditional_else"
+                      }
+                    ]
                   },
                   {
                     "type": "BLANK"
@@ -3407,6 +3463,58 @@
           }
         }
       ]
+    },
+    "_catch_conditional_elseif": {
+      "type": "PREC_DYNAMIC",
+      "value": 2,
+      "content": {
+        "type": "SEQ",
+        "members": [
+          {
+            "type": "STRING",
+            "value": "#elseif"
+          },
+          {
+            "type": "SYMBOL",
+            "name": "compile_condition"
+          },
+          {
+            "type": "REPEAT1",
+            "content": {
+              "type": "PREC",
+              "value": 1,
+              "content": {
+                "type": "SYMBOL",
+                "name": "_catch"
+              }
+            }
+          }
+        ]
+      }
+    },
+    "_catch_conditional_else": {
+      "type": "PREC_DYNAMIC",
+      "value": 2,
+      "content": {
+        "type": "SEQ",
+        "members": [
+          {
+            "type": "STRING",
+            "value": "#else"
+          },
+          {
+            "type": "REPEAT1",
+            "content": {
+              "type": "PREC",
+              "value": 1,
+              "content": {
+                "type": "SYMBOL",
+                "name": "_catch"
+              }
+            }
+          }
+        ]
+      }
     },
     "_catch": {
       "type": "SEQ",
