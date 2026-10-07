@@ -492,3 +492,34 @@ enum Property<T> {
           params: (ComplexType
             (TypePath
               name: (type_name))))))))
+
+================================================================================
+metadata before a type parameter
+================================================================================
+
+abstract A<T, @:const R:EReg>(T) {}
+class B<@:generic T> {}
+
+--------------------------------------------------------------------------------
+
+(module
+  (AbstractType
+    name: (type_name)
+    (TypeParameter
+      name: (type_name))
+    (TypeParameter
+      meta: (MetaDataEntry
+        name: (identifier))
+      name: (type_name)
+      constraint: (ComplexType
+        (TypePath
+          name: (type_name))))
+    type: (ComplexType
+      (TypePath
+        name: (type_name))))
+  (ClassType
+    name: (type_name)
+    (TypeParameter
+      meta: (MetaDataEntry
+        name: (identifier))
+      name: (type_name))))

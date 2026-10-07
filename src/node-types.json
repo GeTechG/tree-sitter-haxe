@@ -8444,6 +8444,16 @@
           }
         ]
       },
+      "meta": {
+        "multiple": true,
+        "required": false,
+        "types": [
+          {
+            "type": "MetaDataEntry",
+            "named": true
+          }
+        ]
+      },
       "name": {
         "multiple": false,
         "required": true,

@@ -4499,6 +4499,17 @@
       "members": [
         {
           "type": "FIELD",
+          "name": "meta",
+          "content": {
+            "type": "REPEAT",
+            "content": {
+              "type": "SYMBOL",
+              "name": "MetaDataEntry"
+            }
+          }
+        },
+        {
+          "type": "FIELD",
           "name": "name",
           "content": {
             "type": "SYMBOL",

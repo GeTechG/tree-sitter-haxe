@@ -966,6 +966,7 @@ export default grammar({
 
     TypeParameter: ($) =>
       seq(
+        field("meta", repeat($.MetaDataEntry)),
         field("name", $._type_name),
         optional(seq(":", field("constraint", $.ComplexType))),
         optional(seq("=", field("default", $.ComplexType))),
