@@ -9658,6 +9658,10 @@
           "named": true
         },
         {
+          "type": "optional",
+          "named": true
+        },
+        {
           "type": "reification",
           "named": true
         },
@@ -10716,6 +10720,10 @@
           "named": true
         },
         {
+          "type": "optional",
+          "named": true
+        },
+        {
           "type": "reification",
           "named": true
         },
@@ -11561,6 +11569,10 @@
         },
         {
           "type": "null",
+          "named": true
+        },
+        {
+          "type": "optional",
           "named": true
         },
         {

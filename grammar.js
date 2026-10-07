@@ -1338,6 +1338,14 @@ export default grammar({
         prec.left(2, seq($.compile_condition, "&&", $.compile_condition)),
         prec.left(1, seq($.compile_condition, "||", $.compile_condition)),
       ),
+    // A branch is a run of whole nodes, plus the listed pieces of the node
+    // around it. Deliberately not parsed, each costing more than it would
+    // recover: a branch that opens a brace another one closes (`#if a for (..)
+    // { #else if (..) { #end`, a function header per branch, `try {` ... `}
+    // catch`), the head of a statement (`#if a if (x) #else if (y) #end z;`),
+    // the left end of an expression (`#if a x && #end y`, `#if a c ? x : #end
+    // y`), a declaration keyword or name (`#if a final #else var #end x:T;`),
+    // and a catch between two unconditional ones.
     _conditional_body: ($) =>
       choice(
         // ISSUE: adding everything sucks
@@ -1359,7 +1367,7 @@ export default grammar({
         // field is read as an object field, so its type must look like an
         // expression (`f: a.B`, not `f: Array<T>`).
         ",",
-        $._object_field,
+        seq(optional($.optional), $._object_field),
         // Clauses of an enclosing `try` / `switch`.
         $._catch,
         $.switch_case,

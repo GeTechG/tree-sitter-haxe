@@ -403,3 +403,35 @@ function f() {
         else: (ECall
           callee: (identifier))
         (conditional_end)))))
+
+=====================================
+conditional optional structure field
+=====================================
+
+typedef T = {
+	?a : Int,
+#if x
+	?b : Bool,
+#end
+};
+
+---
+
+(module
+  (DefType
+    name: (type_name)
+    type: (ComplexType
+      (TAnonymous
+        (Field
+          (optional)
+          name: (identifier)
+          type: (ComplexType
+            (TypePath
+              name: (type_name))))
+        (conditional
+          (compile_condition
+            (identifier))
+          (optional)
+          name: (identifier)
+          value: (identifier)
+          (conditional_end))))))

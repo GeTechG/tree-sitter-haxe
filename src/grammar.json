@@ -7180,8 +7180,25 @@
           "value": ","
         },
         {
-          "type": "SYMBOL",
-          "name": "_object_field"
+          "type": "SEQ",
+          "members": [
+            {
+              "type": "CHOICE",
+              "members": [
+                {
+                  "type": "SYMBOL",
+                  "name": "optional"
+                },
+                {
+                  "type": "BLANK"
+                }
+              ]
+            },
+            {
+              "type": "SYMBOL",
+              "name": "_object_field"
+            }
+          ]
         },
         {
           "type": "SYMBOL",

@@ -1,21 +1,21 @@
 {
   "haxeRevision": "94673be33d7b4938c59acd39314d3a6e02674724",
-  "recordedFromGrammarRevision": "TSHX-1 (#if in expressions/types/lists, `_ ->`, literal `$` in strings, keyword field names)",
+  "recordedFromGrammarRevision": "TSHX-2 (package paths in parenthesised types, `macro class {`, `inline new`, GADT enum constructors, local static, pieces of a construct under #if)",
   "note": "Achieved-result floor: the std gate fails if cleanFiles drops or std error/missing nodes rise below/above these accepted values. Update only when an intentional improvement raises them.",
   "std": {
     "totalFiles": 2583,
-    "cleanFiles": 2551,
-    "failedFiles": 32,
-    "successPercent": 98.76,
-    "errorNodes": 316,
-    "missingNodes": 7
+    "cleanFiles": 2558,
+    "failedFiles": 25,
+    "successPercent": 99.03,
+    "errorNodes": 302,
+    "missingNodes": 4
   },
   "repository": {
     "totalFiles": 5862,
-    "cleanFiles": 5640,
-    "failedFiles": 222,
-    "successPercent": 96.21,
-    "errorNodes": 808,
-    "missingNodes": 55
+    "cleanFiles": 5688,
+    "failedFiles": 174,
+    "successPercent": 97.03,
+    "errorNodes": 691,
+    "missingNodes": 44
   }
 }
