@@ -106,6 +106,21 @@ const RESERVED_KEYWORDS = [
   "while",
 ];
 
+/** @param {GrammarSymbols<string>} $ @returns {Rule} */
+function conditional($) {
+  return prec.right(
+    PREC.CONDITIONAL,
+    seq(
+      "#if",
+      $.compile_condition,
+      repeat($._conditional_body),
+      repeat($.conditional_elseif),
+      optional($.conditional_else),
+      $.conditional_end,
+    ),
+  );
+}
+
 export default grammar({
   name: "haxe",
   extras: ($) => [/\s+/, $.comment, $.conditional],
@@ -199,6 +214,12 @@ export default grammar({
     [$.import, $._dot_path],
     [$.ClassType, $.EnumType],
     [$.FunctionArg, $.wildcard_pattern],
+    [$.switch_case],
+    [$.EnumType, $.modifier],
+    [$.AbstractType, $.modifier],
+    [$.ClassType, $.modifier],
+    [$.ClassType, $.ClassMethod, $.modifier],
+    [$.ClassMethod, $.modifier],
   ],
   inline: ($) => [
     $._semicolon,
@@ -213,8 +234,9 @@ export default grammar({
     module: ($) =>
       seq(
         optional($.package),
-        repeat(choice($.import, $.using)),
-        repeat(choice($._type_decl, $._expr_statement)),
+        // Imports are not held to the top: a leading `#if ... #end` parses as an
+        // expression statement, and imports may still follow it.
+        repeat(choice($.import, $.using, $._type_decl, $._expr_statement)),
       ),
 
     //////////////////////////////////////////////////////////////////////////
@@ -285,6 +307,10 @@ export default grammar({
         $.EWhile,
         $._expr_meta,
         $.EBlock,
+        // `#if` where an expression is required: `var b = #if f a #else 0 #end;`.
+        // Elsewhere the conditional still floats as an extra. A rule cannot be
+        // both an extra and a regular symbol, hence the aliased twin.
+        alias($._expr_conditional, $.conditional),
       ),
     _expr_atom: ($) =>
       choice(
@@ -352,7 +378,10 @@ export default grammar({
         seq(
           field("object", $._Expr),
           field("op", choice(".", "?.")),
-          field("name", choice($._identifier, $._soft_keyword_ident)),
+          field(
+            "name",
+            choice($._identifier, $._soft_keyword_ident, $._keyword_field_name),
+          ),
         ),
       ),
     EArray: ($) =>
@@ -384,7 +413,7 @@ export default grammar({
         seq(
           choice(
             seq("(", ")"),
-            field("args", $._identifier),
+            field("args", choice($._identifier, alias("_", $.identifier))),
             seq(field("args", $._function_args), optional($._type_annotation)),
           ),
           "->",
@@ -495,18 +524,18 @@ export default grammar({
           // multi-line configuration objects are usually written with.
           optional(
             seq(
-              commaSep1(
-                seq(
-                  field("name", choice($.identifier, $.String)),
-                  ":",
-                  field("value", $._Expr),
-                ),
-              ),
+              commaSep1($._object_field),
               optional(","),
             ),
           ),
           "}",
         ),
+      ),
+    _object_field: ($) =>
+      seq(
+        field("name", choice($.identifier, $.String)),
+        ":",
+        field("value", $._Expr),
       ),
     EArrayDecl: ($) =>
       prec(
@@ -667,17 +696,17 @@ export default grammar({
         seq(
           "try",
           $._block_or_expr,
-          repeat1(
-            seq(
-              "catch",
-              "(",
-              field("name", $.identifier),
-              optional($._type_annotation),
-              ")",
-              field("body", $._block_or_expr),
-            ),
-          ),
+          repeat1($._catch),
         ),
+      ),
+    _catch: ($) =>
+      seq(
+        "catch",
+        "(",
+        field("name", $.identifier),
+        optional($._type_annotation),
+        ")",
+        field("body", $._block_or_expr),
       ),
     ECheckType: ($) =>
       prec.right(
@@ -720,8 +749,8 @@ export default grammar({
             repeat(seq($._Expr, optional($._semicolon))),
             "}",
           ),
-          seq(token(/\$i\{/), $.identifier, "}"),
-          seq(token(/\$p\{/), commaSep($.identifier), "}"),
+          seq(token(/\$i\{/), $._Expr, "}"),
+          seq(token(/\$p\{/), commaSep($._Expr), "}"),
           seq(token(/\$v\{/), $._Expr, "}"),
         ),
       ),
@@ -760,6 +789,7 @@ export default grammar({
         //field("TPath", prec(PREC.PRIMARY, $.TypePath)),
         prec(PREC.PRIMARY, $.TypePath),
         $.TAnonymous,
+        $.TConditional,
         $._ct_paren, // ( T ) and function-arg lists: (), (T, U), (a:T, ?b:U)
         prec.right(seq("?", $._base_type)), // TOptional: ?Int
         prec.right(seq("...", $._base_type)), // TRest: ...Int -> haxe.Rest<Int>
@@ -918,8 +948,8 @@ export default grammar({
           field("name", $._identifier),
           optional($.property_accessor),
           optional($._type_annotation),
-          optional(seq("=", $._Expr)),
-          $._semicolon,
+          // No `;` is needed after an initializer that ends in `}`.
+          choice(seq("=", $._Expr, optional($._semicolon)), $._semicolon),
         ),
       ),
     property_accessor: ($) =>
@@ -1032,8 +1062,9 @@ export default grammar({
         /\d[\d_]*\.\d[\d_]*([eE][+-]?\d[\d_]*)?/,
         /\d[\d_]*\.[eE][+-]?\d[\d_]*_?f\d+/,
         /\d[\d_]*\.[eE][+-]?\d[\d_]*/,
-        /\.[\d_]+([eE][+-]?\d[\d_]*)?_?f\d+/,
-        /\.[\d_]+([eE][+-]?\d[\d_]*)?/,
+        // The fraction must start with a digit: `m._11` is a field access.
+        /\.\d[\d_]*([eE][+-]?\d[\d_]*)?_?f\d+/,
+        /\.\d[\d_]*([eE][+-]?\d[\d_]*)?/,
         /\d[\d_]*[eE][+-]?\d[\d_]*_?f\d+/,
         /\d[\d_]*[eE][+-]?\d[\d_]*/,
         /\d[\d_]*_?f\d+/,
@@ -1055,6 +1086,8 @@ export default grammar({
               alias(token.immediate(prec(2, "$$")), $.escape_sequence),
               $.escape_sequence,
               $.interpolation,
+              // A `$` that starts no interpolation is a literal: `'^[a-z]+$'`.
+              alias("$", $.fragment),
             ),
           ),
           "'",
@@ -1075,8 +1108,12 @@ export default grammar({
       seq(
         "$",
         choice(
-          seq(token.immediate("{"), $._Expr, "}"),
-          alias(token.immediate(/[a-zA-Z_][a-zA-Z0-9_]*/), $.identifier),
+          // Precedence over `fragment`, which is also valid after a literal `$`.
+          seq(token.immediate(prec(2, "{")), $._Expr, "}"),
+          alias(
+            token.immediate(prec(2, /[a-zA-Z_][a-zA-Z0-9_]*/)),
+            $.identifier,
+          ),
         ),
       ),
 
@@ -1125,18 +1162,16 @@ export default grammar({
     // Field modifier keywords, usable as a lone `#if ... #end` conditional body.
     // Higher precedence so a bare modifier token inside a conditional resolves
     // to this rule rather than starting a class field / inline-call expression.
+    // `final` and `enum` also open a declaration (`final x:T;`, `enum E {}`), so
+    // they get no such precedence and are left to the declared conflicts.
     modifier: (_) =>
-      prec(
-        30,
-        choice(
-          "inline",
-          "static",
-          "final",
-          "dynamic",
-          "override",
-          "extern",
-          "overload",
+      choice(
+        prec(
+          30,
+          choice("inline", "static", "dynamic", "override", "extern", "overload"),
         ),
+        "final",
+        "enum",
       ),
 
     identifier: (_) => /[a-zA-Z_][a-zA-Z0-9_]*/,
@@ -1147,6 +1182,10 @@ export default grammar({
     // accepts it as a plain identifier for fields, methods, variables and calls.
     // (`from`/`to` are not reserved, so they already work as identifiers.)
     _soft_keyword_ident: ($) => alias("as", $.identifier),
+    // After a dot the compiler takes a keyword as a plain field name
+    // (parser.ml `parse_field`), which is how `haxe.macro.Context` is spelled.
+    _keyword_field_name: ($) =>
+      alias(choice("macro", "extern", "new"), $.identifier),
     package_name: (_) => /[a-z_][a-zA-Z0-9_]*/,
     // Higher lexical precedence so an uppercase word prefers `type_name` over
     // `identifier` in states where both are valid (e.g. unnamed function-type
@@ -1166,32 +1205,36 @@ export default grammar({
 
     // ------------------------------------------------------------------------
 
-    conditional: ($) =>
-      prec.right(
-        PREC.CONDITIONAL,
-        seq(
-          "#if",
-          $.compile_condition,
-          repeat($._conditional_body),
-          repeat($.conditional_elseif),
-          optional($.conditional_else),
-          $.conditional_end,
+    conditional: ($) => conditional($),
+    _expr_conditional: ($) => conditional($),
+    // A for-in iterable that is one conditional with expression branches. It
+    // predates conditionals as general expressions and keeps its own shape,
+    // which queries/highlights.scm matches on.
+    EConditional: ($) =>
+      prec.dynamic(
+        1,
+        prec.right(
+          PREC.CONDITIONAL,
+          seq(
+            "#if",
+            $.compile_condition,
+            $._Expr,
+            repeat(seq("#elseif", $.compile_condition, $._Expr)),
+            optional(seq("#else", $._Expr)),
+            $.conditional_end,
+          ),
         ),
       ),
-    // Conditional in expression position, whose branches are full expressions.
-    // Distinct from the floating `conditional` extra so it can fill a required
-    // expression slot (e.g. a for-loop iterable or a var initializer).
-    EConditional: ($) =>
-      prec.right(
-        PREC.CONDITIONAL,
-        seq(
-          "#if",
-          $.compile_condition,
-          $._Expr,
-          repeat(seq("#elseif", $.compile_condition, $._Expr)),
-          optional(seq("#else", $._Expr)),
-          $.conditional_end,
-        ),
+    // Conditional in type position, whose branches are types:
+    // `var buf : #if flash flash.utils.ByteArray #else StringBuf #end;`.
+    TConditional: ($) =>
+      seq(
+        "#if",
+        $.compile_condition,
+        $.ComplexType,
+        repeat(seq("#elseif", $.compile_condition, $.ComplexType)),
+        optional(seq("#else", $.ComplexType)),
+        $.conditional_end,
       ),
     compile_condition: ($) =>
       choice(
@@ -1240,6 +1283,16 @@ export default grammar({
         seq("implements", field("implements", $.TypePath)),
         $.conditional_error,
         repeat1($.MetaDataEntry),
+        // Pieces of an enclosing list (array, arguments, object or structure
+        // fields): `[#if a "x", "y" #end]`, `{ #if a f: 1, #end }`. A structure
+        // field is read as an object field, so its type must look like an
+        // expression (`f: a.B`, not `f: Array<T>`).
+        ",",
+        $._object_field,
+        // Clauses of an enclosing `try` / `switch`.
+        $._catch,
+        $.switch_case,
+        $.switch_default,
       ),
     conditional_elseif: ($) =>
       seq("#elseif", $.compile_condition, repeat($._conditional_body)),

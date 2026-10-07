@@ -1,0 +1,259 @@
+==========================================
+arrow function with wildcard parameter
+==========================================
+
+f(x, _ -> 0);
+acquire(p, _ -> g());
+h = _ -> {};
+
+---
+
+(module
+  (ECall
+    (identifier)
+    (identifier)
+    (EArrowFunction
+      (identifier)
+      (Int)))
+  (ECall
+    (identifier)
+    (identifier)
+    (EArrowFunction
+      (identifier)
+      (ECall
+        (identifier))))
+  (EBinop
+    (identifier)
+    (EArrowFunction
+      (identifier)
+      (EBlock))))
+
+==========================================
+final field without initializer
+==========================================
+
+class C {
+  final backend:Process;
+  public final port:Int;
+}
+
+---
+
+(module
+  (ClassType
+    (type_name)
+    (ClassVar
+      (identifier)
+      (ComplexType
+        (TypePath
+          (type_name))))
+    (ClassVar
+      (identifier)
+      (ComplexType
+        (TypePath
+          (type_name))))))
+
+==========================================
+keyword as package name in expression path
+==========================================
+
+haxe.macro.Context.typeExpr(e);
+var d = haxe.macro.Context.getDefines();
+
+---
+
+(module
+  (ECall
+    (EField
+      (EField
+        (EField
+          (identifier)
+          (identifier))
+        (identifier))
+      (identifier))
+    (identifier))
+  (EVars
+    (identifier)
+    (ECall
+      (EField
+        (EField
+          (EField
+            (identifier)
+            (identifier))
+          (identifier))
+        (identifier)))))
+
+==========================================
+catch with fully qualified type
+==========================================
+
+try {} catch (e:cs.system.reflection.TargetInvocationException) {}
+
+---
+
+(module
+  (ETry
+    (EBlock)
+    (identifier)
+    (ComplexType
+      (TypePath
+        (package_name)
+        (package_name)
+        (package_name)
+        (type_name)))
+    (EBlock)))
+
+==========================================
+array pattern with guard
+==========================================
+
+switch (x) {
+  case [FVar(_, _), ret] if (cf.isFinal): 1;
+}
+
+---
+
+(module
+  (ESwitch
+    (identifier)
+    (cases
+      (switch_case
+        (EArrayDecl
+          (ECall
+            (identifier)
+            (wildcard_pattern)
+            (wildcard_pattern))
+          (identifier))
+        (EField
+          (identifier)
+          (identifier))
+        (Int)))))
+
+==========================================
+dollar at end of single-quoted string
+==========================================
+
+var s = '^[a-z][a-z0-9-]{0,31}$';
+var t = '$a costs 5$ or ${b}$';
+
+---
+
+(module
+  (EVars
+    (identifier)
+    (String
+      (fragment)
+      (fragment)))
+  (EVars
+    (identifier)
+    (String
+      (interpolation
+        (identifier))
+      (fragment)
+      (fragment)
+      (fragment)
+      (interpolation
+        (identifier))
+      (fragment))))
+
+==========================================
+reification with operator
+==========================================
+
+macro if ($p{["this", n]} != null) $p{["c", n]} = $p{["this", n]};
+macro $i{a.name} = $i{b};
+
+---
+
+(module
+  (macro
+    (EIf
+      (EBinop
+        (reification
+          (EArrayDecl
+            (String
+              (fragment))
+            (identifier)))
+        (null))
+      (EBinop
+        (reification
+          (EArrayDecl
+            (String
+              (fragment))
+            (identifier)))
+        (reification
+          (EArrayDecl
+            (String
+              (fragment))
+            (identifier))))))
+  (macro
+    (EBinop
+      (reification
+        (EField
+          (identifier)
+          (identifier)))
+      (reification
+        (identifier)))))
+
+==========================================
+class var initializer block without semicolon
+==========================================
+
+class S {
+  static var SRC = {
+    @param var alpha : Float;
+    function fragment() {
+      pixelColor.a *= alpha;
+    }
+  }
+  var x:Int;
+}
+
+---
+
+(module
+  (ClassType
+    (type_name)
+    (ClassVar
+      (identifier)
+      (EBlock
+        (EMeta
+          (MetaDataEntry
+            (identifier))
+          (EVars
+            (identifier)
+            (ComplexType
+              (TypePath
+                (type_name)))))
+        (EFunction
+          (identifier)
+          (EBlock
+            (EBinop
+              (EField
+                (identifier)
+                (identifier))
+              (identifier))))))
+    (ClassVar
+      (identifier)
+      (ComplexType
+        (TypePath
+          (type_name))))))
+
+==========================================
+field starting with underscore and digit
+==========================================
+
+var sx = m._11, sy = m._22;
+
+---
+
+(module
+  (EVars
+    (identifier)
+    (EField
+      (identifier)
+      (identifier))
+    (identifier)
+    (EField
+      (identifier)
+      (identifier))))

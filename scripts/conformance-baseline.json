@@ -1,21 +1,21 @@
 {
   "haxeRevision": "94673be33d7b4938c59acd39314d3a6e02674724",
-  "recordedFromGrammarRevision": "port-upstream-haxe-grammar-fixes (upstream v0.5.0 trailing commas, var declarators, 1e5)",
+  "recordedFromGrammarRevision": "TSHX-1 (#if in expressions/types/lists, `_ ->`, literal `$` in strings, keyword field names)",
   "note": "Achieved-result floor: the std gate fails if cleanFiles drops or std error/missing nodes rise below/above these accepted values. Update only when an intentional improvement raises them.",
   "std": {
     "totalFiles": 2583,
-    "cleanFiles": 2527,
-    "failedFiles": 56,
-    "successPercent": 97.83,
-    "errorNodes": 521,
-    "missingNodes": 9
+    "cleanFiles": 2551,
+    "failedFiles": 32,
+    "successPercent": 98.76,
+    "errorNodes": 316,
+    "missingNodes": 7
   },
   "repository": {
     "totalFiles": 5862,
-    "cleanFiles": 5482,
-    "failedFiles": 380,
-    "successPercent": 93.52,
-    "errorNodes": 1485,
-    "missingNodes": 53
+    "cleanFiles": 5638,
+    "failedFiles": 224,
+    "successPercent": 96.18,
+    "errorNodes": 832,
+    "missingNodes": 54
   }
 }

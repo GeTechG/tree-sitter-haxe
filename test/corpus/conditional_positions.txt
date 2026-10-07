@@ -1,0 +1,495 @@
+==========================================
+conditional as var initializer
+==========================================
+
+var b = #if flag a #else 0 #end;
+
+---
+
+(module
+  (EVars
+    (identifier)
+    (conditional
+      (compile_condition
+        (identifier))
+      (identifier)
+      (conditional_else
+        (Int))
+      (conditional_end))))
+
+==========================================
+conditional as class var initializer
+==========================================
+
+class C {
+  static inline var BUFFERING = #if buffering true #else false #end;
+}
+
+---
+
+(module
+  (ClassType
+    (type_name)
+    (ClassVar
+      (identifier)
+      (conditional
+        (compile_condition
+          (identifier))
+        (true)
+        (conditional_else
+          (false))
+        (conditional_end)))))
+
+==========================================
+conditional as binop operand
+==========================================
+
+if (t.module == #if (haxe_ver >= 4) "a" #else "b" #end) {}
+
+---
+
+(module
+  (EIf
+    (EBinop
+      (EField
+        (identifier)
+        (identifier))
+      (conditional
+        (compile_condition
+          (compile_condition
+            (compile_condition
+              (identifier))
+            (compile_condition
+              (Int))))
+        (String
+          (fragment))
+        (conditional_else
+          (String
+            (fragment)))
+        (conditional_end)))
+    (EBlock)))
+
+==========================================
+conditional as call argument
+==========================================
+
+f(#if macro a.b() #else c #end);
+
+---
+
+(module
+  (ECall
+    (identifier)
+    (conditional
+      (compile_condition
+        (identifier))
+      (ECall
+        (EField
+          (identifier)
+          (identifier)))
+      (conditional_else
+        (identifier))
+      (conditional_end))))
+
+==========================================
+conditional in var type
+==========================================
+
+class C {
+  var buf : #if flash flash.utils.ByteArray #else StringBuf #end;
+}
+
+---
+
+(module
+  (ClassType
+    (type_name)
+    (ClassVar
+      (identifier)
+      (ComplexType
+        (TConditional
+          (compile_condition
+            (identifier))
+          (ComplexType
+            (TypePath
+              (package_name)
+              (package_name)
+              (type_name)))
+          (ComplexType
+            (TypePath
+              (type_name)))
+          (conditional_end))))))
+
+==========================================
+conditional in typedef field type
+==========================================
+
+typedef T = { tile : #if macro Bool #else h2d.Tile #end }
+
+---
+
+(module
+  (DefType
+    (type_name)
+    (ComplexType
+      (TAnonymous
+        (Field
+          (identifier)
+          (ComplexType
+            (TConditional
+              (compile_condition
+                (identifier))
+              (ComplexType
+                (TypePath
+                  (type_name)))
+              (ComplexType
+                (TypePath
+                  (package_name)
+                  (type_name)))
+              (conditional_end))))))))
+
+==========================================
+conditional as typedef target
+==========================================
+
+typedef F = #if hl hl.F32 #elseif js Float32 #else Float #end;
+
+---
+
+(module
+  (DefType
+    (type_name)
+    (ComplexType
+      (TConditional
+        (compile_condition
+          (identifier))
+        (ComplexType
+          (TypePath
+            (package_name)
+            (type_name)))
+        (compile_condition
+          (identifier))
+        (ComplexType
+          (TypePath
+            (type_name)))
+        (ComplexType
+          (TypePath
+            (type_name)))
+        (conditional_end)))))
+
+==========================================
+conditional inside array literal
+==========================================
+
+var a = [#if (haxe_ver >= 4) "haxe", "ds" #end];
+var b = ["heaps" #if hide , "hide" #end];
+
+---
+
+(module
+  (EVars
+    (identifier)
+    (EArrayDecl
+      (conditional
+        (compile_condition
+          (compile_condition
+            (compile_condition
+              (identifier))
+            (compile_condition
+              (Int))))
+        (String
+          (fragment))
+        (String
+          (fragment))
+        (conditional_end))))
+  (EVars
+    (identifier)
+    (EArrayDecl
+      (String
+        (fragment))
+      (conditional
+        (compile_condition
+          (identifier))
+        (String
+          (fragment))
+        (conditional_end)))))
+
+==========================================
+conditional inside object literal
+==========================================
+
+var o = { a: 1, #if (haxe_ver >= 4) isFinal: false, #end };
+
+---
+
+(module
+  (EVars
+    (identifier)
+    (EObjectDecl
+      (identifier)
+      (Int)
+      (conditional
+        (compile_condition
+          (compile_condition
+            (compile_condition
+              (identifier))
+            (compile_condition
+              (Int))))
+        (identifier)
+        (false)
+        (conditional_end)))))
+
+==========================================
+conditional inside call arguments
+==========================================
+
+build(width, bytes #if (format >= "3.3") , level #end);
+
+---
+
+(module
+  (ECall
+    (identifier)
+    (identifier)
+    (identifier)
+    (conditional
+      (compile_condition
+        (compile_condition
+          (compile_condition
+            (identifier))
+          (compile_condition
+            (String
+              (fragment)))))
+      (identifier)
+      (conditional_end))))
+
+==========================================
+conditional before declaration modifiers
+==========================================
+
+#if haxe4 enum #else @:enum #end abstract E(Int) {}
+
+---
+
+(module
+  (conditional
+    (compile_condition
+      (identifier))
+    (modifier)
+    (conditional_else
+      (MetaDataEntry
+        (identifier)))
+    (conditional_end))
+  (AbstractType
+    (type_name)
+    (ComplexType
+      (TypePath
+        (type_name)))))
+
+==========================================
+conditional with call in condition
+==========================================
+
+typedef S = {
+  name: String,
+  #if (format >= version("3.8.0")) sourceMap: format.map.Data, #end
+}
+
+---
+
+(module
+  (DefType
+    (type_name)
+    (ComplexType
+      (TAnonymous
+        (Field
+          (identifier)
+          (ComplexType
+            (TypePath
+              (type_name))))
+        (conditional
+          (compile_condition
+            (compile_condition
+              (compile_condition
+                (identifier))
+              (compile_condition
+                (compile_condition
+                  (identifier))
+                (compile_condition
+                  (String
+                    (fragment))))))
+          (identifier)
+          (EField
+            (EField
+              (identifier)
+              (identifier))
+            (identifier))
+          (conditional_end))))))
+
+==========================================
+conditional before imports
+==========================================
+
+package a;
+
+#if !macro
+import b.C;
+#end
+import d.E;
+
+---
+
+(module
+  (package
+    (package_name))
+  (conditional
+    (compile_condition
+      (compile_condition
+        (identifier)))
+    (import
+      (package_name)
+      (type_name))
+    (conditional_end))
+  (import
+    (package_name)
+    (type_name)))
+
+==========================================
+final field inside conditional
+==========================================
+
+class C {
+  #if sys
+  public final port:Int;
+  final backend:Process;
+  #end
+}
+
+---
+
+(module
+  (ClassType
+    (type_name)
+    (conditional
+      (compile_condition
+        (identifier))
+      (ClassVar
+        (identifier)
+        (ComplexType
+          (TypePath
+            (type_name))))
+      (ClassVar
+        (identifier)
+        (ComplexType
+          (TypePath
+            (type_name))))
+      (conditional_end))))
+
+==========================================
+final variable inside conditional
+==========================================
+
+function f() {
+  #if sys
+  final registered:Array<String> = [];
+  #end
+}
+
+---
+
+(module
+  (EFunction
+    (identifier)
+    (EBlock
+      (conditional
+        (compile_condition
+          (identifier))
+        (ClassVar
+          (identifier)
+          (ComplexType
+            (TypePath
+              (type_name)
+              (ComplexType
+                (TypePath
+                  (type_name)))))
+          (EArrayDecl))
+        (conditional_end)))))
+
+==========================================
+catch inside conditional
+==========================================
+
+try {
+  a();
+}
+#if cs
+catch (e:cs.system.reflection.TargetInvocationException) {
+  b();
+}
+#end
+catch (e:Any) {
+  c();
+}
+
+---
+
+(module
+  (ETry
+    (EBlock
+      (ECall
+        (identifier)))
+    (conditional
+      (compile_condition
+        (identifier))
+      (identifier)
+      (ComplexType
+        (TypePath
+          (package_name)
+          (package_name)
+          (package_name)
+          (type_name)))
+      (EBlock
+        (ECall
+          (identifier)))
+      (conditional_end))
+    (identifier)
+    (ComplexType
+      (TypePath
+        (type_name)))
+    (EBlock
+      (ECall
+        (identifier)))))
+
+==========================================
+case inside conditional
+==========================================
+
+switch (x) {
+  #if haxe4
+  case [FVar(_, _), ret] if (cf.isFinal): 1;
+  #end
+  case _: 2;
+}
+
+---
+
+(module
+  (ESwitch
+    (identifier)
+    (conditional
+      (compile_condition
+        (identifier))
+      (switch_case
+        (EArrayDecl
+          (ECall
+            (identifier)
+            (wildcard_pattern)
+            (wildcard_pattern))
+          (identifier))
+        (EField
+          (identifier)
+          (identifier))
+        (Int))
+      (conditional_end))
+    (switch_default
+      (Int))))
