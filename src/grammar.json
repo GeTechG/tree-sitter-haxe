@@ -720,53 +720,49 @@
             "type": "FIELD",
             "name": "args",
             "content": {
-              "type": "CHOICE",
+              "type": "SEQ",
               "members": [
                 {
-                  "type": "SEQ",
-                  "members": [
-                    {
-                      "type": "CHOICE",
-                      "members": [
-                        {
-                          "type": "SYMBOL",
-                          "name": "reification"
-                        },
-                        {
-                          "type": "SYMBOL",
-                          "name": "_Expr"
-                        }
-                      ]
-                    },
-                    {
-                      "type": "REPEAT",
-                      "content": {
+                  "type": "REPEAT",
+                  "content": {
+                    "type": "CHOICE",
+                    "members": [
+                      {
                         "type": "SEQ",
                         "members": [
                           {
-                            "type": "STRING",
-                            "value": ","
+                            "type": "SYMBOL",
+                            "name": "_Expr"
                           },
                           {
-                            "type": "CHOICE",
-                            "members": [
-                              {
-                                "type": "SYMBOL",
-                                "name": "reification"
-                              },
-                              {
-                                "type": "SYMBOL",
-                                "name": "_Expr"
-                              }
-                            ]
+                            "type": "STRING",
+                            "value": ","
                           }
                         ]
+                      },
+                      {
+                        "type": "ALIAS",
+                        "content": {
+                          "type": "SYMBOL",
+                          "name": "_expr_conditional"
+                        },
+                        "named": true,
+                        "value": "conditional"
                       }
-                    }
-                  ]
+                    ]
+                  }
                 },
                 {
-                  "type": "BLANK"
+                  "type": "CHOICE",
+                  "members": [
+                    {
+                      "type": "SYMBOL",
+                      "name": "_Expr"
+                    },
+                    {
+                      "type": "BLANK"
+                    }
+                  ]
                 }
               ]
             }
@@ -2010,52 +2006,49 @@
             "value": "{"
           },
           {
-            "type": "CHOICE",
+            "type": "SEQ",
             "members": [
               {
-                "type": "SEQ",
-                "members": [
-                  {
-                    "type": "SEQ",
-                    "members": [
-                      {
-                        "type": "SYMBOL",
-                        "name": "_object_field"
-                      },
-                      {
-                        "type": "REPEAT",
-                        "content": {
-                          "type": "SEQ",
-                          "members": [
-                            {
-                              "type": "STRING",
-                              "value": ","
-                            },
-                            {
-                              "type": "SYMBOL",
-                              "name": "_object_field"
-                            }
-                          ]
+                "type": "REPEAT",
+                "content": {
+                  "type": "CHOICE",
+                  "members": [
+                    {
+                      "type": "SEQ",
+                      "members": [
+                        {
+                          "type": "SYMBOL",
+                          "name": "_object_field"
+                        },
+                        {
+                          "type": "STRING",
+                          "value": ","
                         }
-                      }
-                    ]
-                  },
-                  {
-                    "type": "CHOICE",
-                    "members": [
-                      {
-                        "type": "STRING",
-                        "value": ","
+                      ]
+                    },
+                    {
+                      "type": "ALIAS",
+                      "content": {
+                        "type": "SYMBOL",
+                        "name": "_expr_conditional"
                       },
-                      {
-                        "type": "BLANK"
-                      }
-                    ]
-                  }
-                ]
+                      "named": true,
+                      "value": "conditional"
+                    }
+                  ]
+                }
               },
               {
-                "type": "BLANK"
+                "type": "CHOICE",
+                "members": [
+                  {
+                    "type": "SYMBOL",
+                    "name": "_object_field"
+                  },
+                  {
+                    "type": "BLANK"
+                  }
+                ]
               }
             ]
           },
@@ -2120,36 +2113,41 @@
                     "type": "SEQ",
                     "members": [
                       {
-                        "type": "SEQ",
-                        "members": [
-                          {
-                            "type": "SYMBOL",
-                            "name": "_Expr"
-                          },
-                          {
-                            "type": "REPEAT",
-                            "content": {
+                        "type": "REPEAT",
+                        "content": {
+                          "type": "CHOICE",
+                          "members": [
+                            {
                               "type": "SEQ",
                               "members": [
                                 {
-                                  "type": "STRING",
-                                  "value": ","
-                                },
-                                {
                                   "type": "SYMBOL",
                                   "name": "_Expr"
+                                },
+                                {
+                                  "type": "STRING",
+                                  "value": ","
                                 }
                               ]
+                            },
+                            {
+                              "type": "ALIAS",
+                              "content": {
+                                "type": "SYMBOL",
+                                "name": "_expr_conditional"
+                              },
+                              "named": true,
+                              "value": "conditional"
                             }
-                          }
-                        ]
+                          ]
+                        }
                       },
                       {
                         "type": "CHOICE",
                         "members": [
                           {
-                            "type": "STRING",
-                            "value": ","
+                            "type": "SYMBOL",
+                            "name": "_Expr"
                           },
                           {
                             "type": "BLANK"
@@ -7200,10 +7198,6 @@
       "compile_condition"
     ],
     [
-      "_expr_meta",
-      "ECall"
-    ],
-    [
       "_expr_prim",
       "_expr_value"
     ],
@@ -7238,6 +7232,21 @@
     [
       "FunctionArg",
       "wildcard_pattern"
+    ],
+    [
+      "_expr_prim"
+    ],
+    [
+      "_expr_prim",
+      "ECall"
+    ],
+    [
+      "_expr_prim",
+      "EObjectDecl"
+    ],
+    [
+      "_expr_prim",
+      "EArrayDecl"
     ],
     [
       "switch_case"

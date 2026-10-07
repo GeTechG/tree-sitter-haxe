@@ -257,3 +257,48 @@ var sx = m._11, sy = m._22;
     (EField
       (identifier)
       (identifier))))
+
+==========================================
+class var initializers that need no semicolon
+==========================================
+
+class S {
+  var f = function() {
+    g();
+  }
+  static var BIN =
+  #if windows
+    "a.exe";
+  #else
+    "a";
+  #end
+  var x:Int;
+}
+
+---
+
+(module
+  (ClassType
+    (type_name)
+    (ClassVar
+      (identifier)
+      (EFunction
+        (EBlock
+          (ECall
+            (identifier)))))
+    (ClassVar
+      (identifier)
+      (conditional
+        (compile_condition
+          (identifier))
+        (String
+          (fragment))
+        (conditional_else
+          (String
+            (fragment)))
+        (conditional_end)))
+    (ClassVar
+      (identifier)
+      (ComplexType
+        (TypePath
+          (type_name))))))

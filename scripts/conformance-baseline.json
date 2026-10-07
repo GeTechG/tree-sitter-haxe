@@ -12,10 +12,10 @@
   },
   "repository": {
     "totalFiles": 5862,
-    "cleanFiles": 5638,
-    "failedFiles": 224,
-    "successPercent": 96.18,
-    "errorNodes": 832,
-    "missingNodes": 54
+    "cleanFiles": 5640,
+    "failedFiles": 222,
+    "successPercent": 96.21,
+    "errorNodes": 808,
+    "missingNodes": 55
   }
 }

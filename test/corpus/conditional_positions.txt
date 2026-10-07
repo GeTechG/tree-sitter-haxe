@@ -493,3 +493,63 @@ switch (x) {
       (conditional_end))
     (switch_default
       (Int))))
+
+==========================================
+conditional first in object literal
+==========================================
+
+var o = { #if a f: 1, #end };
+var p = { #if a f: 1, #end g: 2 };
+
+---
+
+(module
+  (EVars
+    (identifier)
+    (EObjectDecl
+      (conditional
+        (compile_condition
+          (identifier))
+        (identifier)
+        (Int)
+        (conditional_end))))
+  (EVars
+    (identifier)
+    (EObjectDecl
+      (conditional
+        (compile_condition
+          (identifier))
+        (identifier)
+        (Int)
+        (conditional_end))
+      (identifier)
+      (Int))))
+
+==========================================
+conditional bringing its own comma in array and arguments
+==========================================
+
+var a = [#if x 1, #end 2];
+f(a, #if x b, #end c);
+
+---
+
+(module
+  (EVars
+    (identifier)
+    (EArrayDecl
+      (conditional
+        (compile_condition
+          (identifier))
+        (Int)
+        (conditional_end))
+      (Int)))
+  (ECall
+    (identifier)
+    (identifier)
+    (conditional
+      (compile_condition
+        (identifier))
+      (identifier)
+      (conditional_end))
+    (identifier)))

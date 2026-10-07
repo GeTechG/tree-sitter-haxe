@@ -106,6 +106,22 @@ const RESERVED_KEYWORDS = [
   "while",
 ];
 
+/**
+ * A comma-separated list (trailing comma allowed) in which a conditional may
+ * stand between elements and bring its own commas: `[#if a 1, #end 2]`.
+ * @param {GrammarSymbols<string>} $
+ * @param {Rule} rule
+ * @returns {Rule}
+ */
+function condList($, rule) {
+  return seq(
+    repeat(
+      choice(seq(rule, ","), alias($._expr_conditional, $.conditional)),
+    ),
+    optional(rule),
+  );
+}
+
 /** @param {GrammarSymbols<string>} $ @returns {Rule} */
 function conditional($) {
   return prec.right(
@@ -204,7 +220,6 @@ export default grammar({
     [$._dot_path],
     [$._expr_atom, $._expr_value],
     [$._expr_lhs, $.compile_condition],
-    [$._expr_meta, $.ECall],
     [$._expr_prim, $._expr_value],
     [$._expr_value, $._Expr],
     [$._expr_value, $._expr_lhs],
@@ -214,6 +229,10 @@ export default grammar({
     [$.import, $._dot_path],
     [$.ClassType, $.EnumType],
     [$.FunctionArg, $.wildcard_pattern],
+    [$._expr_prim],
+    [$._expr_prim, $.ECall],
+    [$._expr_prim, $.EObjectDecl],
+    [$._expr_prim, $.EArrayDecl],
     [$.switch_case],
     [$.EnumType, $.modifier],
     [$.AbstractType, $.modifier],
@@ -368,7 +387,7 @@ export default grammar({
             ),
           ),
           "(",
-          field("args", commaSep(choice($.reification, $._Expr))),
+          field("args", condList($, $._Expr)),
           ")",
         ),
       ),
@@ -522,12 +541,7 @@ export default grammar({
           "{",
           // A trailing comma after the last field is legal Haxe, and is what
           // multi-line configuration objects are usually written with.
-          optional(
-            seq(
-              commaSep1($._object_field),
-              optional(","),
-            ),
-          ),
+          condList($, $._object_field),
           "}",
         ),
       ),
@@ -547,7 +561,7 @@ export default grammar({
               // Haxe permits a trailing comma after the last element,
               // `["a", "b",]`, which hand-maintained tables rely on so that
               // every line can end the same way.
-              seq(commaSep1($._Expr), optional(",")),
+              condList($, $._Expr),
               alias($._comprehension_for, $.EFor),
               $.EWhile,
             ),
@@ -948,7 +962,10 @@ export default grammar({
           field("name", $._identifier),
           optional($.property_accessor),
           optional($._type_annotation),
-          // No `;` is needed after an initializer that ends in `}`.
+          // The compiler wants no `;` after an initializer that ends in `}` or
+          // `#end` (a block, a function, inline markup, a conditional). "Ends
+          // in" is not a rule of this grammar, so the `;` is optional after any
+          // initializer rather than listing the forms and missing some.
           choice(seq("=", $._Expr, optional($._semicolon)), $._semicolon),
         ),
       ),
