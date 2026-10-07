@@ -777,20 +777,22 @@ export default grammar({
     _catches: ($) => tryTail($, $._catch),
     _catch_conditionals: ($) =>
       tryTail($, alias($._catch_conditional, $.conditional)),
-    // A conditional whose first branch starts with a catch belongs to the
-    // `try` before it; any other one follows the finished `try`.
-    _catch_conditional: ($) =>
-      prec.dynamic(
-        1,
-        seq(
-          "#if",
-          $.compile_condition,
-          repeat1($._catch),
-          repeat($.conditional_elseif),
-          optional($.conditional_else),
-          $.conditional_end,
-        ),
-      ),
+    // A conditional after a `try` or a catch, holding catches of that `try`.
+    // One whose first branch starts with a catch belongs to the `try`; any
+    // other one follows the finished `try`, unless a catch comes after it
+    // (`try {} #if x #else catch (e) {} #end catch (e) {}`).
+    _catch_conditional: ($) => {
+      const rest = [
+        repeat($.conditional_elseif),
+        optional($.conditional_else),
+        $.conditional_end,
+      ];
+      const head = ["#if", $.compile_condition];
+      return choice(
+        prec.dynamic(1, seq(...head, repeat1($._catch), ...rest)),
+        prec.dynamic(-1, seq(...head, ...rest)),
+      );
+    },
     _catch: ($) =>
       seq(
         "catch",

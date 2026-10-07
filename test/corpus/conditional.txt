@@ -511,6 +511,8 @@ try {} #if x a(); #end
 try {} #if x catch (e) {} #end
 try {} catch (e) {} #if x catch (e) {} #else b(); #end
 try {} catch (e) {} #if x b(); #end
+try {} #if x #else catch (e) {} #end catch (e) {}
+try {} #if x #else b(); #end
 
 ---
 
@@ -553,4 +555,24 @@ try {} catch (e) {} #if x b(); #end
       (identifier))
     (ECall
       (identifier))
+    (conditional_end))
+  (ETry
+    (EBlock)
+    (conditional
+      (compile_condition
+        (identifier))
+      (conditional_else
+        (identifier)
+        (EBlock))
+      (conditional_end))
+    (identifier)
+    (EBlock))
+  (ETry
+    (EBlock))
+  (conditional
+    (compile_condition
+      (identifier))
+    (conditional_else
+      (ECall
+        (identifier)))
     (conditional_end)))
