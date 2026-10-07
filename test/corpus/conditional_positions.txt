@@ -797,7 +797,7 @@ brackets in inline markup do not cut a construct
 ==========================================
 
 #if a var x = <xml>(</xml>; #else var y = 1 << (b); #end
-#if a return <xml>[</xml>; #else return a <b; #end
+#if a return /* c */ <xml>[</xml>; #else return a <b; #end
 
 ---
 
@@ -819,6 +819,8 @@ brackets in inline markup do not cut a construct
     (compile_condition
       (identifier))
     (EReturn
+      (comment
+        (block_comment))
       (InlineXml))
     (conditional_else
       (EReturn

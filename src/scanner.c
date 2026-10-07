@@ -428,15 +428,19 @@ static bool is_cut(TSLexer *lexer) {
       previous = '>';
       continue;
     }
-    // The word the code ends with, for the keyword check above.
-    if (!is_ident_char(c)) {
-      word_length = 0;
-    } else {
-      if (word_length < sizeof(word) - 1) word[word_length] = (char)c;
-      word_length++;
+    // A comment changes nothing: `return /* c */ <a/>`. Nor does `/`, an
+    // operator markup does not follow anyway.
+    if (c != '/') {
+      // The word the code ends with, for the keyword check above.
+      if (!is_ident_char(c)) {
+        word_length = 0;
+      } else {
+        if (word_length < sizeof(word) - 1) word[word_length] = (char)c;
+        word_length++;
+      }
+      // A string ends an operand.
+      previous = c == '\'' || c == '~' ? '"' : c;
     }
-    // A string ends an operand, a comment changes nothing.
-    if (c != '/') previous = c == '\'' || c == '~' ? '"' : c;
     if (skip_text(lexer)) continue;
     if (c == '#') {
       switch (read_directive(lexer)) {
