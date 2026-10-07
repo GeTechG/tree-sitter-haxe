@@ -963,6 +963,7 @@ function f() {
   #end
   else if (c)
     z();
+  if (a) x(); #if b #else else if (c) y(); #end else z();
 }
 
 ---
@@ -988,7 +989,16 @@ function f() {
           (EIf
             (identifier)
             (ECall
-              (identifier))))))))
+              (identifier)))))
+      (EIf
+        (identifier)
+        (ECall
+          (identifier))
+        (conditional_if)
+        (conditional_inactive)
+        (conditional_end)
+        (ECall
+          (identifier))))))
 
 ==========================================
 whole-node conditionals that look like a piece of a declaration or an if

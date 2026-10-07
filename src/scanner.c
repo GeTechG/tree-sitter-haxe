@@ -432,8 +432,8 @@ static bool is_expr_keyword(const char *word, unsigned length) {
 // or one that the code after `#end` continues:
 // - a branch ending with `var name`, when `:` follows the conditional:
 //   `#if a var x #else var y #end : T;`;
-// - a first branch starting with `else`, when `else` follows the conditional
-//   too: `#if a else if (x) {..} #end else ..`.
+// - a branch starting with `else`, when `else` follows the conditional too:
+//   `#if a else if (x) {..} #end else ..`.
 // A conditional nested in a branch counts by its first branch, the one that
 // is parsed if it is cut itself; were it not cut, no branch would matter.
 static bool is_cut(TSLexer *lexer) {
@@ -446,8 +446,7 @@ static bool is_cut(TSLexer *lexer) {
   int32_t before_word = 0;   // the character of code before it
   bool after_var = false;    // it follows `var` or `final`
   unsigned code = 0;         // characters of code in the branch, a string as one
-  bool first = true;         // in the first branch
-  bool starts_else = false;  // the first branch starts with `else`
+  bool starts_else = false;  // a branch started with `else`
   bool if_head = false;      // the open bracket follows `if`
   bool ends_if_head = false; // the branch ends with `if (..)`
   bool names_var = false;    // a branch ended with `var name`
@@ -491,7 +490,6 @@ static bool is_cut(TSLexer *lexer) {
         }
         brackets = 0;
         code = 0;
-        first = false;
       } else {
         switch (directive) {
           case D_IF:
@@ -521,7 +519,7 @@ static bool is_cut(TSLexer *lexer) {
     if (c == '/') {
       spaced = true;
     } else {
-      if (first && code == 4 && is_word(word, word_length, "else") &&
+      if (code == 4 && is_word(word, word_length, "else") &&
           (spaced || !is_ident_char(c))) {
         starts_else = true;
       }
