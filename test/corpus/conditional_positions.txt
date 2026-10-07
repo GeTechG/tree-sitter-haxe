@@ -553,3 +553,27 @@ f(a, #if x b, #end c);
       (identifier)
       (conditional_end))
     (identifier)))
+
+==========================================
+conditional object field followed by a comma
+==========================================
+
+var o = {#if x a:1 #else b:2 #end, c:3};
+
+---
+
+(module
+  (EVars
+    (identifier)
+    (EObjectDecl
+      (conditional
+        (compile_condition
+          (identifier))
+        (identifier)
+        (Int)
+        (conditional_else
+          (identifier)
+          (Int))
+        (conditional_end))
+      (identifier)
+      (Int))))

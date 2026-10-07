@@ -116,7 +116,12 @@ const RESERVED_KEYWORDS = [
 function condList($, rule) {
   return seq(
     repeat(
-      choice(seq(rule, ","), alias($._expr_conditional, $.conditional)),
+      choice(
+        seq(rule, ","),
+        // The comma may also follow the conditional, when every branch gives
+        // an element: `{#if a x: 1 #else y: 2 #end, z: 3}`.
+        seq(alias($._expr_conditional, $.conditional), optional(",")),
+      ),
     ),
     optional(rule),
   );
