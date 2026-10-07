@@ -265,3 +265,141 @@ class D {}
       (ClassType
         name: (type_name)))
     (conditional_end)))
+
+=====================================
+conditional holding the tail of an expression
+=====================================
+
+var a = b == c #if x && false #end;
+var d = (e) #if js | 0 #end;
+
+---
+
+(module
+  (EVars
+    name: (identifier)
+    value: (EBinop
+      left: (identifier)
+      right: (identifier)))
+  (conditional
+    (compile_condition
+      (identifier))
+    (conditional_binop
+      right: (false))
+    (conditional_end))
+  (EVars
+    name: (identifier)
+    value: (identifier))
+  (conditional
+    (compile_condition
+      (identifier))
+    (conditional_binop
+      right: (Int))
+    (conditional_end)))
+
+=====================================
+conditional holding a result type annotation
+=====================================
+
+function f(a:Int) #if haxe4 : ObjectField #end {
+}
+
+---
+
+(module
+  (EFunction
+    name: (identifier)
+    args: (FunctionArg
+      name: (identifier)
+      type: (ComplexType
+        (TypePath
+          name: (type_name))))
+    body: (conditional
+      (compile_condition
+        (identifier))
+      type: (ComplexType
+        (TypePath
+          name: (type_name)))
+      (conditional_end)))
+  (EObjectDecl))
+
+=====================================
+conditional type name before the type parameters
+=====================================
+
+var m : Map<Int,#if hl hl.NativeArray #else Array #end<T>>;
+
+---
+
+(module
+  (EVars
+    name: (identifier)
+    type: (ComplexType
+      (TypePath
+        name: (type_name)
+        params: (ComplexType
+          (TypePath
+            name: (type_name)))
+        params: (ComplexType
+          (TConditional
+            (compile_condition
+              (identifier))
+            (ComplexType
+              (TypePath
+                pack: (package_name)
+                name: (type_name)))
+            (ComplexType
+              (TypePath
+                name: (type_name)))
+            (conditional_end))
+          params: (ComplexType
+            (TypePath
+              name: (type_name))))))))
+
+=====================================
+conditional ending in else, and conditional else clause
+=====================================
+
+function f() {
+	#if a
+	if( b )
+		c();
+	else
+	#end
+	d();
+	if( b ) {
+		c();
+	}
+	#if a
+	else
+		d();
+	#end
+}
+
+---
+
+(module
+  (EFunction
+    name: (identifier)
+    body: (EBlock
+      (conditional
+        (compile_condition
+          (identifier))
+        (EIf
+          cond: (identifier)
+          if: (ECall
+            callee: (identifier)))
+        (conditional_end))
+      (ECall
+        callee: (identifier))
+      (EIf
+        cond: (identifier)
+        if: (EBlock
+          (ECall
+            callee: (identifier))))
+      (conditional
+        (compile_condition
+          (identifier))
+        else: (ECall
+          callee: (identifier))
+        (conditional_end)))))

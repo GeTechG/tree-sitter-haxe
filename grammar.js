@@ -217,6 +217,7 @@ export default grammar({
     [$._block_or_expr],
     [$._base_type, $.optional],
     [$._base_type, $._structure_type],
+    [$._EConst, $._object_field],
     [$._class_field, $._conditional_body],
     [$._dot_path],
     [$._expr_atom, $._expr_value],
@@ -841,7 +842,11 @@ export default grammar({
         //field("TPath", prec(PREC.PRIMARY, $.TypePath)),
         prec(PREC.PRIMARY, $.TypePath),
         $.TAnonymous,
-        $.TConditional,
+        // The conditional may choose the type the parameters are applied to:
+        // `Map<Int, #if hl hl.NativeArray #else Array #end<T>>`.
+        prec.right(
+          seq($.TConditional, optional(field("params", $._type_arguments))),
+        ),
         $._ct_paren, // ( T ) and function-arg lists: (), (T, U), (a:T, ?b:U)
         prec.right(seq("?", $._base_type)), // TOptional: ?Int
         prec.right(seq("...", $._base_type)), // TRest: ...Int -> haxe.Rest<Int>
@@ -1359,6 +1364,32 @@ export default grammar({
         $._catch,
         $.switch_case,
         $.switch_default,
+        // The end of the expression before it: `a == b #if x && c #end`.
+        $.conditional_binop,
+        // The result type of the function before it: `f() #if x : T #end {`.
+        $._type_annotation,
+        // `else` across the boundary: `#if x if (a) b; else #end c;` and
+        // `if (a) b; #if x else c; #end`.
+        alias($._if_else_open, $.EIf),
+        seq("else", field("else", $._block_or_expr)),
+      ),
+    conditional_binop: ($) =>
+      seq(
+        field("op", choice("||", "&&", "|", "^", "&")),
+        field("right", $._Expr),
+      ),
+    // Same precedence as EIf, or the parser would close the `if` before `else`.
+    _if_else_open: ($) =>
+      prec.right(
+        PREC.CONTROL + 1,
+        seq(
+          "if",
+          "(",
+          field("cond", $._Expr),
+          ")",
+          field("if", $._block_or_expr),
+          "else",
+        ),
       ),
     conditional_elseif: ($) =>
       seq("#elseif", $.compile_condition, repeat($._conditional_body)),

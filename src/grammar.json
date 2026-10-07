@@ -3742,8 +3742,33 @@
           "name": "TAnonymous"
         },
         {
-          "type": "SYMBOL",
-          "name": "TConditional"
+          "type": "PREC_RIGHT",
+          "value": 0,
+          "content": {
+            "type": "SEQ",
+            "members": [
+              {
+                "type": "SYMBOL",
+                "name": "TConditional"
+              },
+              {
+                "type": "CHOICE",
+                "members": [
+                  {
+                    "type": "FIELD",
+                    "name": "params",
+                    "content": {
+                      "type": "SYMBOL",
+                      "name": "_type_arguments"
+                    }
+                  },
+                  {
+                    "type": "BLANK"
+                  }
+                ]
+              }
+            ]
+          }
         },
         {
           "type": "SYMBOL",
@@ -7169,8 +7194,125 @@
         {
           "type": "SYMBOL",
           "name": "switch_default"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "conditional_binop"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "_type_annotation"
+        },
+        {
+          "type": "ALIAS",
+          "content": {
+            "type": "SYMBOL",
+            "name": "_if_else_open"
+          },
+          "named": true,
+          "value": "EIf"
+        },
+        {
+          "type": "SEQ",
+          "members": [
+            {
+              "type": "STRING",
+              "value": "else"
+            },
+            {
+              "type": "FIELD",
+              "name": "else",
+              "content": {
+                "type": "SYMBOL",
+                "name": "_block_or_expr"
+              }
+            }
+          ]
         }
       ]
+    },
+    "conditional_binop": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "FIELD",
+          "name": "op",
+          "content": {
+            "type": "CHOICE",
+            "members": [
+              {
+                "type": "STRING",
+                "value": "||"
+              },
+              {
+                "type": "STRING",
+                "value": "&&"
+              },
+              {
+                "type": "STRING",
+                "value": "|"
+              },
+              {
+                "type": "STRING",
+                "value": "^"
+              },
+              {
+                "type": "STRING",
+                "value": "&"
+              }
+            ]
+          }
+        },
+        {
+          "type": "FIELD",
+          "name": "right",
+          "content": {
+            "type": "SYMBOL",
+            "name": "_Expr"
+          }
+        }
+      ]
+    },
+    "_if_else_open": {
+      "type": "PREC_RIGHT",
+      "value": 1,
+      "content": {
+        "type": "SEQ",
+        "members": [
+          {
+            "type": "STRING",
+            "value": "if"
+          },
+          {
+            "type": "STRING",
+            "value": "("
+          },
+          {
+            "type": "FIELD",
+            "name": "cond",
+            "content": {
+              "type": "SYMBOL",
+              "name": "_Expr"
+            }
+          },
+          {
+            "type": "STRING",
+            "value": ")"
+          },
+          {
+            "type": "FIELD",
+            "name": "if",
+            "content": {
+              "type": "SYMBOL",
+              "name": "_block_or_expr"
+            }
+          },
+          {
+            "type": "STRING",
+            "value": "else"
+          }
+        ]
+      }
     },
     "conditional_elseif": {
       "type": "SEQ",
@@ -7432,6 +7574,10 @@
     [
       "_base_type",
       "_structure_type"
+    ],
+    [
+      "_EConst",
+      "_object_field"
     ],
     [
       "_class_field",
