@@ -762,3 +762,55 @@ f("#if a (", '#end');
       (fragment))
     (String
       (fragment))))
+
+==========================================
+compound condition of a conditional cutting a construct
+==========================================
+
+#if a && !b || c >= "4"
+function f(x:Int) {
+#else
+function f() {
+#end
+  g();
+}
+
+---
+
+(module
+  (conditional_if)
+  (EFunction
+    (identifier)
+    (FunctionArg
+      (identifier)
+      (ComplexType
+        (TypePath
+          (type_name))))
+    (EBlock
+      (conditional_inactive)
+      (conditional_end)
+      (ECall
+        (identifier)))))
+
+==========================================
+brackets in inline markup do not cut a construct
+==========================================
+
+#if a var x = <xml>(</xml>; #else var y = 1 << (b); #end
+
+---
+
+(module
+  (conditional
+    (compile_condition
+      (identifier))
+    (EVars
+      (identifier)
+      (InlineXml))
+    (conditional_else
+      (ClassVar
+        (identifier)
+        (EBinop
+          (Int)
+          (identifier))))
+    (conditional_end)))

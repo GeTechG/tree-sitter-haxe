@@ -179,6 +179,90 @@ static bool read_name_matches_root(TSLexer *lexer, const NameBuf *root) {
   return match && idx == root->len;
 }
 
+// Bounded inline-XML markup, following HaxeFoundation/haxe src/syntax/lexer.ml
+// `lex_xml`/`not_xml`: depth tracks only repetitions of the *root* tag name,
+// there is intentionally no string/quote balancing, and `/>` self-closes only
+// while still inside the root opening tag (fragments cannot self-close).
+// Skips the markup after its `<`; false when none starts or ends here.
+static bool skip_markup(TSLexer *lexer) {
+  // Only start markup when the root opening tag is plausible: a name-start char
+  // or an empty-name fragment (`<>...</>`). This keeps stray `<` out of markup.
+  if (!is_name_start(lexer->lookahead) && lexer->lookahead != '>') return false;
+
+  NameBuf root = {NULL, 0, 0};
+  bool result = false;
+  if (!read_root_name(lexer, &root)) goto done;
+
+  // A comma after the name is a type-argument list (`E<T, ~//>`), never markup:
+  // tag attributes are not comma-separated.
+  while (is_whitespace(lexer->lookahead)) {
+    lexer->advance(lexer, false);
+  }
+  if (lexer->lookahead == ',') goto done;
+
+  int depth = 0;
+  bool in_open = root.len > 0; // a fragment (empty name) is never "in open"
+
+  while (lexer->lookahead != 0) {
+    int32_t c = lexer->lookahead;
+
+    if (c == '<') {
+      lexer->advance(lexer, false);
+      if (lexer->lookahead == '/') {
+        // Possible closing tag `</name>`.
+        lexer->advance(lexer, false);
+        bool matches = read_name_matches_root(lexer, &root);
+        if (lexer->lookahead == '>') {
+          lexer->advance(lexer, false);
+          if (matches) {
+            if (depth == 0) {
+              result = true;
+              goto done;
+            }
+            depth--;
+          } else {
+            in_open = false;
+          }
+        }
+        // A `</name` not followed by `>` is consumed as content.
+        continue;
+      }
+      // Possible opening tag `<name` (name may be empty).
+      if (read_name_matches_root(lexer, &root)) {
+        depth++;
+        in_open = true;
+      } else {
+        in_open = false;
+      }
+      continue;
+    }
+
+    if (c == '/') {
+      lexer->advance(lexer, false);
+      if (lexer->lookahead == '>') {
+        lexer->advance(lexer, false);
+        if (in_open) depth--;
+        if (depth < 0) {
+          result = true;
+          goto done;
+        }
+        in_open = false;
+      }
+      // A lone `/` is content.
+      continue;
+    }
+
+    // Lone `>`, quotes, braces, and any other character are plain content
+    // (Haxe performs no quote/brace balancing inside markup).
+    lexer->advance(lexer, false);
+  }
+
+  // Reached EOF without closing the root tag: unterminated markup.
+done:
+  free(root.data);
+  return result;
+}
+
 static bool is_ident_char(int32_t c) {
   return is_haxe_ident_start(c) || (c >= '0' && c <= '9');
 }
@@ -252,9 +336,9 @@ static Directive read_directive(TSLexer *lexer) {
   return D_OTHER;
 }
 
-// Skip the condition of an `#if`, as the Haxe parser reads it: a name, a
-// literal, a parenthesised expression, any of them under `!`.
-static bool skip_condition(TSLexer *lexer) {
+// Skip one operand of a condition: a name, a literal, a parenthesised
+// expression, any of them under `!`.
+static bool skip_condition_operand(TSLexer *lexer) {
   for (;;) {
     while (is_whitespace(lexer->lookahead)) lexer->advance(lexer, false);
     if (lexer->lookahead != '!') break;
@@ -280,23 +364,64 @@ static bool skip_condition(TSLexer *lexer) {
   return true;
 }
 
+// Skip the condition of an `#if`, marking its end if asked: operands joined by `&&`,
+// `||` and comparisons, as `compile_condition` takes them without parentheses.
+static bool skip_condition(TSLexer *lexer, bool mark) {
+  for (bool first = true;; first = false) {
+    // An operator with no operand after it was the branch.
+    if (!skip_condition_operand(lexer)) return !first;
+    if (mark) lexer->mark_end(lexer);
+    while (is_whitespace(lexer->lookahead)) lexer->advance(lexer, false);
+    int32_t c = lexer->lookahead;
+    if (c != '&' && c != '|' && c != '=' && c != '!' && c != '<' && c != '>') {
+      return true;
+    }
+    lexer->advance(lexer, false);
+    if (c == '&' || c == '|' || c == '=' || c == '!') {
+      // `&&`, `||`, `==`, `!=`: anything else is the branch already.
+      if (lexer->lookahead != (c == '!' ? '=' : c)) return true;
+      lexer->advance(lexer, false);
+    } else if (lexer->lookahead == '=') {
+      lexer->advance(lexer, false);
+    }
+  }
+}
+
 // From after `#if` to its `#end`: whether a branch has an unpaired bracket.
 // A conditional nested in a branch counts by its first branch, the one that
 // is parsed if it is cut itself; were it not cut, no branch would matter.
 static bool is_cut(TSLexer *lexer) {
-  if (!skip_condition(lexer)) return false;
+  if (!skip_condition(lexer, false)) return false;
   bool cut = false;
+  int32_t previous = 0; // the last character of code
   int brackets = 0;
   unsigned nested = 0;  // open `#if`s inside this one
   unsigned ignored = 0; // the nested level whose later branch we are in
   while (lexer->lookahead != 0) {
     int32_t c = lexer->lookahead;
+    if (is_whitespace(c)) {
+      lexer->advance(lexer, false);
+      continue;
+    }
+    // After an operand `<` compares or opens type parameters; anywhere else
+    // it opens markup, whose brackets are text.
+    // ponytail: `return <a>(</a>` is still read as code; needs the keyword.
+    if (c == '<' && !is_ident_char(previous) && previous != ')' &&
+        previous != ']' && previous != '}' && previous != '"' &&
+        previous != '<') {
+      lexer->advance(lexer, false);
+      skip_markup(lexer);
+      previous = '>';
+      continue;
+    }
+    // A string ends an operand, a comment changes nothing.
+    if (c != '/') previous = c == '\'' || c == '~' ? '"' : c;
     if (skip_text(lexer)) continue;
     if (c == '#') {
       switch (read_directive(lexer)) {
         case D_IF:
           nested++;
-          if (!skip_condition(lexer)) return false;
+          if (!skip_condition(lexer, false)) return false;
           break;
         case D_ELSE:
           if (nested == 0) {
@@ -411,10 +536,6 @@ static bool scan_directive(Scanner *scanner, TSLexer *lexer) {
   return false;
 }
 
-// Bounded inline-XML markup, following HaxeFoundation/haxe src/syntax/lexer.ml
-// `lex_xml`/`not_xml`: depth tracks only repetitions of the *root* tag name,
-// there is intentionally no string/quote balancing, and `/>` self-closes only
-// while still inside the root opening tag (fragments cannot self-close).
 bool tree_sitter_haxe_external_scanner_scan(
   void *payload,
   TSLexer *lexer,
@@ -433,8 +554,7 @@ bool tree_sitter_haxe_external_scanner_scan(
 
   if (scanner->condition_pending) {
     scanner->condition_pending = false;
-    if (!skip_condition(lexer)) return false;
-    lexer->mark_end(lexer);
+    if (!skip_condition(lexer, true)) return false;
     lexer->result_symbol = CUT_CONDITION;
     return true;
   }
@@ -453,84 +573,8 @@ bool tree_sitter_haxe_external_scanner_scan(
   if (lexer->lookahead != '<') return false;
   lexer->advance(lexer, false);
 
-  // Only start markup when the root opening tag is plausible: a name-start char
-  // or an empty-name fragment (`<>...</>`). This keeps stray `<` out of markup.
-  if (!is_name_start(lexer->lookahead) && lexer->lookahead != '>') return false;
-
-  NameBuf root = {NULL, 0, 0};
-  bool result = false;
-  if (!read_root_name(lexer, &root)) goto done;
-
-  // A comma after the name is a type-argument list (`E<T, ~//>`), never markup:
-  // tag attributes are not comma-separated.
-  while (is_whitespace(lexer->lookahead)) {
-    lexer->advance(lexer, false);
-  }
-  if (lexer->lookahead == ',') goto done;
-
-  int depth = 0;
-  bool in_open = root.len > 0; // a fragment (empty name) is never "in open"
-
-  while (lexer->lookahead != 0) {
-    int32_t c = lexer->lookahead;
-
-    if (c == '<') {
-      lexer->advance(lexer, false);
-      if (lexer->lookahead == '/') {
-        // Possible closing tag `</name>`.
-        lexer->advance(lexer, false);
-        bool matches = read_name_matches_root(lexer, &root);
-        if (lexer->lookahead == '>') {
-          lexer->advance(lexer, false);
-          if (matches) {
-            if (depth == 0) {
-              lexer->mark_end(lexer);
-              lexer->result_symbol = INLINE_XML;
-              result = true;
-              goto done;
-            }
-            depth--;
-          } else {
-            in_open = false;
-          }
-        }
-        // A `</name` not followed by `>` is consumed as content.
-        continue;
-      }
-      // Possible opening tag `<name` (name may be empty).
-      if (read_name_matches_root(lexer, &root)) {
-        depth++;
-        in_open = true;
-      } else {
-        in_open = false;
-      }
-      continue;
-    }
-
-    if (c == '/') {
-      lexer->advance(lexer, false);
-      if (lexer->lookahead == '>') {
-        lexer->advance(lexer, false);
-        if (in_open) depth--;
-        if (depth < 0) {
-          lexer->mark_end(lexer);
-          lexer->result_symbol = INLINE_XML;
-          result = true;
-          goto done;
-        }
-        in_open = false;
-      }
-      // A lone `/` is content.
-      continue;
-    }
-
-    // Lone `>`, quotes, braces, and any other character are plain content
-    // (Haxe performs no quote/brace balancing inside markup).
-    lexer->advance(lexer, false);
-  }
-
-  // Reached EOF without closing the root tag: unterminated markup.
-done:
-  free(root.data);
-  return result;
+  if (!skip_markup(lexer)) return false;
+  lexer->mark_end(lexer);
+  lexer->result_symbol = INLINE_XML;
+  return true;
 }
