@@ -577,3 +577,188 @@ var o = {#if x a:1 #else b:2 #end, c:3};
         (conditional_end))
       (identifier)
       (Int))))
+
+==========================================
+branches each open the brace closed after the conditional
+==========================================
+
+class A {
+  #if a
+  function f(x:Int) {
+  #elseif b
+  function f(y:Int) {
+  #else
+  function f() {
+  #end
+    g();
+  }
+}
+
+---
+
+(module
+  (ClassType
+    (type_name)
+    (conditional_if)
+    (ClassMethod
+      (identifier)
+      (FunctionArg
+        (identifier)
+        (ComplexType
+          (TypePath
+            (type_name))))
+      (EBlock
+        (conditional_inactive)
+        (conditional_end)
+        (ECall
+          (identifier))))))
+
+==========================================
+bracket opened under one conditional and closed under another
+==========================================
+
+f(#if a g( #end 1 #if a ) #end);
+
+---
+
+(module
+  (ECall
+    (identifier)
+    (conditional_if)
+    (ECall
+      (identifier)
+      (conditional_end)
+      (Int)
+      (conditional_if))
+    (conditional_end)))
+
+==========================================
+conditional cutting a construct, inside and around whole-node conditionals
+==========================================
+
+#if js
+#if a
+if (x) {
+#else
+while (x) {
+#end
+  #if b y(); #else z(); #end
+}
+#end
+
+---
+
+(module
+  (conditional
+    (compile_condition
+      (identifier))
+    (conditional_if)
+    (EIf
+      (identifier)
+      (EBlock
+        (conditional_inactive)
+        (conditional_end)
+        (conditional
+          (compile_condition
+            (identifier))
+          (ECall
+            (identifier))
+          (conditional_else
+            (ECall
+              (identifier)))
+          (conditional_end))))
+    (conditional_end)))
+
+==========================================
+brackets in strings, regexps and comments do not cut a construct
+==========================================
+
+#if a var s = "(" + '[' + ~/{/; // (
+/* { */ #else var s = 1; #end
+
+---
+
+(module
+  (conditional
+    (compile_condition
+      (identifier))
+    (ClassVar
+      (identifier)
+      (EBinop
+        (EBinop
+          (String
+            (fragment))
+          (String
+            (fragment)))
+        (Regexp)))
+    (comment
+      (line_comment))
+    (comment
+      (block_comment))
+    (conditional_else
+      (ClassVar
+        (identifier)
+        (Int)))
+    (conditional_end)))
+
+==========================================
+condition forms of a conditional cutting a construct
+==========================================
+
+f(#if !a g( #else h( #end 1), #if (b && c("(")) [ #end 2 #if d.e ] #end,
+  #if "s" [ #else ( #if x ] #end #end ]);
+
+---
+
+(module
+  (ECall
+    (identifier)
+    (conditional_if)
+    (ECall
+      (identifier)
+      (conditional_inactive)
+      (conditional_end)
+      (Int))
+    (conditional_if)
+    (EArrayDecl
+      (conditional_end)
+      (Int)
+      (conditional_if))
+    (conditional_end)
+    (conditional_if)
+    (EArrayDecl
+      (conditional_inactive)
+      (conditional_end))))
+
+==========================================
+directives in strings are text
+==========================================
+
+#if a
+var s = "#end" + '#if x' + " #else";
+#end
+f("#if a (", '#end');
+
+---
+
+(module
+  (conditional
+    (compile_condition
+      (identifier))
+    (ClassVar
+      (identifier)
+      (EBinop
+        (EBinop
+          (String
+            (fragment))
+          (String
+            (fragment)))
+        (String
+          (fragment))))
+    (conditional_end))
+  (ECall
+    (identifier)
+    (String
+      (fragment))
+    (String
+      (fragment))))

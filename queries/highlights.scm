@@ -216,4 +216,8 @@
   "#else"
   "#error"
   (conditional_end)
+  (conditional_if)
 ] @keyword.directive
+
+; The branches of a conditional that cuts a construct, after the first.
+(conditional_inactive) @comment

@@ -6304,6 +6304,10 @@
                     "value": "fragment"
                   },
                   {
+                    "type": "SYMBOL",
+                    "name": "_string_content"
+                  },
+                  {
                     "type": "ALIAS",
                     "content": {
                       "type": "IMMEDIATE_TOKEN",
@@ -6372,6 +6376,10 @@
                     },
                     "named": true,
                     "value": "fragment"
+                  },
+                  {
+                    "type": "SYMBOL",
+                    "name": "_string_content"
                   },
                   {
                     "type": "SYMBOL",
@@ -7790,6 +7798,28 @@
     "conditional_end": {
       "type": "STRING",
       "value": "#end"
+    },
+    "conditional_if": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "SYMBOL",
+          "name": "_cut_if"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "_cut_condition"
+        }
+      ]
+    },
+    "_cut_conditional_end": {
+      "type": "ALIAS",
+      "content": {
+        "type": "SYMBOL",
+        "name": "_cut_end"
+      },
+      "named": true,
+      "value": "conditional_end"
     }
   },
   "extras": [
@@ -7804,6 +7834,22 @@
     {
       "type": "SYMBOL",
       "name": "conditional"
+    },
+    {
+      "type": "SYMBOL",
+      "name": "conditional_if"
+    },
+    {
+      "type": "SYMBOL",
+      "name": "conditional_inactive"
+    },
+    {
+      "type": "SYMBOL",
+      "name": "_cut_conditional_end"
+    },
+    {
+      "type": "SYMBOL",
+      "name": "_end_mark"
     }
   ],
   "conflicts": [
@@ -8112,6 +8158,34 @@
     {
       "type": "SYMBOL",
       "name": "_float_trailing_dot"
+    },
+    {
+      "type": "STRING",
+      "value": "#if"
+    },
+    {
+      "type": "SYMBOL",
+      "name": "_cut_if"
+    },
+    {
+      "type": "SYMBOL",
+      "name": "_cut_condition"
+    },
+    {
+      "type": "SYMBOL",
+      "name": "conditional_inactive"
+    },
+    {
+      "type": "SYMBOL",
+      "name": "_cut_end"
+    },
+    {
+      "type": "SYMBOL",
+      "name": "_end_mark"
+    },
+    {
+      "type": "SYMBOL",
+      "name": "_string_content"
     }
   ],
   "inline": [

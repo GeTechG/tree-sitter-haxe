@@ -11449,6 +11449,12 @@
     }
   },
   {
+    "type": "conditional_if",
+    "named": true,
+    "extra": true,
+    "fields": {}
+  },
+  {
     "type": "false",
     "named": true,
     "fields": {}
@@ -13680,6 +13686,11 @@
   {
     "type": "conditional_end",
     "named": true
+  },
+  {
+    "type": "conditional_inactive",
+    "named": true,
+    "extra": true
   },
   {
     "type": "continue",

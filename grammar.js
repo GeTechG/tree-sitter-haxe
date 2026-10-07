@@ -166,8 +166,33 @@ function conditional($, body, elseif, else_) {
 
 export default grammar({
   name: "haxe",
-  extras: ($) => [/\s+/, $.comment, $.conditional],
-  externals: ($) => [$.InlineXml, $._float_trailing_dot],
+  extras: ($) => [
+    /\s+/,
+    $.comment,
+    $.conditional,
+    // The directives of a conditional that cuts a construct, see the scanner.
+    $.conditional_if,
+    $.conditional_inactive,
+    $._cut_conditional_end,
+    $._end_mark,
+  ],
+  externals: ($) => [
+    $.InlineXml,
+    $._float_trailing_dot,
+    // The scanner reads every `#if`, to tell a conditional whose branches are
+    // whole nodes from one that cuts a construct.
+    "#if",
+    $._cut_if,
+    $._cut_condition,
+    $.conditional_inactive,
+    $._cut_end,
+    // Empty, before the `#end` of a whole-node conditional: how the scanner
+    // records that the conditional is closed. `#end` itself stays a token of
+    // the grammar: as an external one it costs a quarter more parse states.
+    $._end_mark,
+    // Never produced: valid inside a string, where `#if` is text.
+    $._string_content,
+  ],
   reserved: {
     global: (_) => RESERVED_KEYWORDS,
   },
@@ -1226,6 +1251,7 @@ export default grammar({
           repeat(
             choice(
               alias(token.immediate(prec(1, /[^'\\$]+/)), $.fragment),
+              $._string_content,
               // `$$` is the literal-dollar escape in interpolated strings; it
               // must out-munch the single-`$` interpolation start.
               alias(token.immediate(prec(2, "$$")), $.escape_sequence),
@@ -1242,6 +1268,7 @@ export default grammar({
           repeat(
             choice(
               alias(token.immediate(prec(1, /[^"\\]+/)), $.fragment),
+              $._string_content,
               $.escape_sequence,
             ),
           ),
@@ -1418,10 +1445,10 @@ export default grammar({
         prec.left(1, seq($.compile_condition, "||", $.compile_condition)),
       ),
     // A branch is a run of whole nodes, plus the listed pieces of the node
-    // around it. Deliberately not parsed, each costing more than it would
-    // recover: a branch that opens a brace another one closes (`#if a for (..)
-    // { #else if (..) { #end`, a function header per branch, `try {` ... `}
-    // catch`), the head of a statement (`#if a if (x) #else if (y) #end z;`),
+    // around it. A branch with an unpaired bracket (`#if a for (..) { #else if
+    // (..) { #end`, a function header per branch) is a `conditional_if`.
+    // Deliberately not parsed, each costing more than it would recover:
+    // the head of a statement (`#if a if (x) #else if (y) #end z;`),
     // the left end of an expression (`#if a x && #end y`, `#if a c ? x : #end
     // y`), a declaration keyword or name (`#if a final #else var #end x:T;`),
     // and a catch between two unconditional ones.
@@ -1485,5 +1512,11 @@ export default grammar({
     conditional_else: ($) => seq("#else", repeat($._conditional_body)),
     conditional_error: ($) => seq("#error", $.String),
     conditional_end: (_) => "#end",
+    // `#if a f( #else g( #end x)`: a branch with an unpaired bracket is no run
+    // of whole nodes. The scanner gives the directives of such a conditional
+    // as extras, so the first branch is parsed in place as plain code and the
+    // other branches are one opaque `conditional_inactive`.
+    conditional_if: ($) => seq($._cut_if, $._cut_condition),
+    _cut_conditional_end: ($) => alias($._cut_end, $.conditional_end),
   },
 });

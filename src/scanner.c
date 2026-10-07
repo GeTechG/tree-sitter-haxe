@@ -3,24 +3,57 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
 
 enum TokenType {
   INLINE_XML,
   FLOAT_TRAILING_DOT,
+  IF,
+  CUT_IF,
+  CUT_CONDITION,
+  CONDITIONAL_INACTIVE,
+  CUT_END,
+  END_MARK,
+  STRING_CONTENT,
 };
 
+// Open `#if`s deeper than this are taken as whole-node conditionals.
+#define MAX_DEPTH 255
+
+// A conditional whose branch has an unpaired bracket cuts a construct: the
+// grammar cannot give it as a node. Its directives are extras instead, and
+// `cut` remembers, for each open `#if`, which kind its `#else` and `#end`
+// belong to.
+//
+// The `#end` of a whole-node conditional is the grammar's token, and the
+// scanner's state is kept only with a token of its own. So before such an
+// `#end` it gives an empty END_MARK, and `marked_end` tells that `#end` from
+// the next one when the scanner is asked again at the same place.
+typedef struct {
+  uint16_t depth;
+  uint16_t marked_end;    // `ends_ahead` at the marked `#end`, 0: none
+  bool condition_pending; // after the `#if` of a cut conditional
+  bool cut[MAX_DEPTH];
+} Scanner;
+
 void *tree_sitter_haxe_external_scanner_create(void) {
-  return NULL;
+  return calloc(1, sizeof(Scanner));
 }
 
 void tree_sitter_haxe_external_scanner_destroy(void *payload) {
-  (void)payload;
+  free(payload);
 }
 
 unsigned tree_sitter_haxe_external_scanner_serialize(void *payload, char *buffer) {
-  (void)payload;
-  (void)buffer;
-  return 0;
+  Scanner *scanner = (Scanner *)payload;
+  unsigned stored = scanner->depth < MAX_DEPTH ? scanner->depth : MAX_DEPTH;
+  buffer[0] = (char)(scanner->depth & 0xFF);
+  buffer[1] = (char)(scanner->depth >> 8);
+  buffer[2] = (char)(scanner->marked_end & 0xFF);
+  buffer[3] = (char)(scanner->marked_end >> 8);
+  buffer[4] = (char)scanner->condition_pending;
+  memcpy(buffer + 5, scanner->cut, stored);
+  return 5 + stored;
 }
 
 void tree_sitter_haxe_external_scanner_deserialize(
@@ -28,9 +61,14 @@ void tree_sitter_haxe_external_scanner_deserialize(
   const char *buffer,
   unsigned length
 ) {
-  (void)payload;
-  (void)buffer;
-  (void)length;
+  Scanner *scanner = (Scanner *)payload;
+  memset(scanner, 0, sizeof(Scanner));
+  if (length < 5) return;
+  scanner->depth = (uint16_t)((uint8_t)buffer[0] | ((uint8_t)buffer[1] << 8));
+  scanner->marked_end =
+    (uint16_t)((uint8_t)buffer[2] | ((uint8_t)buffer[3] << 8));
+  scanner->condition_pending = buffer[4];
+  memcpy(scanner->cut, buffer + 5, length - 5);
 }
 
 // Mirror the Haxe lexer's `xml_name_start_char`
@@ -141,6 +179,238 @@ static bool read_name_matches_root(TSLexer *lexer, const NameBuf *root) {
   return match && idx == root->len;
 }
 
+static bool is_ident_char(int32_t c) {
+  return is_haxe_ident_start(c) || (c >= '0' && c <= '9');
+}
+
+// Skip to past the closing `quote`; the opening one is already consumed.
+static void skip_quoted(TSLexer *lexer, int32_t quote) {
+  while (lexer->lookahead != 0 && lexer->lookahead != quote) {
+    if (lexer->lookahead == '\\') lexer->advance(lexer, false);
+    lexer->advance(lexer, false);
+  }
+  lexer->advance(lexer, false);
+}
+
+// Skip a string, a regexp or a comment starting here, whose brackets and `#`
+// are text. Returns false, consuming nothing, when none starts here.
+// ponytail: a quote inside the `${}` of a '-string ends it early, and one in
+// inline markup opens a string; follow those tokens if a real file needs it.
+static bool skip_text(TSLexer *lexer) {
+  int32_t c = lexer->lookahead;
+  if (c == '"' || c == '\'') {
+    lexer->advance(lexer, false);
+    skip_quoted(lexer, c);
+    return true;
+  }
+  if (c == '~') {
+    lexer->advance(lexer, false);
+    if (lexer->lookahead == '/') {
+      lexer->advance(lexer, false);
+      skip_quoted(lexer, '/');
+    }
+    return true;
+  }
+  if (c == '/') {
+    lexer->advance(lexer, false);
+    if (lexer->lookahead == '/') {
+      while (lexer->lookahead != 0 && lexer->lookahead != '\n') {
+        lexer->advance(lexer, false);
+      }
+    } else if (lexer->lookahead == '*') {
+      lexer->advance(lexer, false);
+      int32_t previous = 0;
+      while (lexer->lookahead != 0 &&
+             !(previous == '*' && lexer->lookahead == '/')) {
+        previous = lexer->lookahead;
+        lexer->advance(lexer, false);
+      }
+      lexer->advance(lexer, false);
+    }
+    return true;
+  }
+  return false;
+}
+
+typedef enum { D_OTHER, D_IF, D_ELSE, D_END } Directive;
+
+// Read the directive at `#`. `#elseif` and `#else` are one kind: both end a
+// branch.
+static Directive read_directive(TSLexer *lexer) {
+  char word[8] = {0};
+  unsigned length = 0;
+  lexer->advance(lexer, false);
+  while (is_ident_char(lexer->lookahead)) {
+    if (length < sizeof(word) - 1) word[length] = (char)lexer->lookahead;
+    length++;
+    lexer->advance(lexer, false);
+  }
+  if (length >= sizeof(word)) return D_OTHER;
+  if (strcmp(word, "if") == 0) return D_IF;
+  if (strcmp(word, "else") == 0 || strcmp(word, "elseif") == 0) return D_ELSE;
+  if (strcmp(word, "end") == 0) return D_END;
+  return D_OTHER;
+}
+
+// Skip the condition of an `#if`, as the Haxe parser reads it: a name, a
+// literal, a parenthesised expression, any of them under `!`.
+static bool skip_condition(TSLexer *lexer) {
+  for (;;) {
+    while (is_whitespace(lexer->lookahead)) lexer->advance(lexer, false);
+    if (lexer->lookahead != '!') break;
+    lexer->advance(lexer, false);
+  }
+  int32_t c = lexer->lookahead;
+  if (c == '(') {
+    int depth = 0;
+    do {
+      if (lexer->lookahead == 0) return false;
+      if (skip_text(lexer)) continue;
+      if (lexer->lookahead == '(') depth++;
+      if (lexer->lookahead == ')') depth--;
+      lexer->advance(lexer, false);
+    } while (depth > 0);
+    return true;
+  }
+  if (c == '"' || c == '\'') return skip_text(lexer);
+  if (!is_ident_char(c)) return false;
+  while (is_ident_char(lexer->lookahead) || lexer->lookahead == '.') {
+    lexer->advance(lexer, false);
+  }
+  return true;
+}
+
+// From after `#if` to its `#end`: whether a branch has an unpaired bracket.
+// A conditional nested in a branch counts by its first branch, the one that
+// is parsed if it is cut itself; were it not cut, no branch would matter.
+static bool is_cut(TSLexer *lexer) {
+  if (!skip_condition(lexer)) return false;
+  bool cut = false;
+  int brackets = 0;
+  unsigned nested = 0;  // open `#if`s inside this one
+  unsigned ignored = 0; // the nested level whose later branch we are in
+  while (lexer->lookahead != 0) {
+    int32_t c = lexer->lookahead;
+    if (skip_text(lexer)) continue;
+    if (c == '#') {
+      switch (read_directive(lexer)) {
+        case D_IF:
+          nested++;
+          if (!skip_condition(lexer)) return false;
+          break;
+        case D_ELSE:
+          if (nested == 0) {
+            if (brackets != 0) cut = true;
+            brackets = 0;
+          } else if (ignored == 0) {
+            ignored = nested;
+          }
+          break;
+        case D_END:
+          if (nested == 0) return cut || brackets != 0;
+          if (ignored == nested) ignored = 0;
+          nested--;
+          break;
+        case D_OTHER:
+          break;
+      }
+      continue;
+    }
+    if (ignored == 0) {
+      if (c == '(' || c == '[' || c == '{') brackets++;
+      if (c == ')' || c == ']' || c == '}') {
+        // A closing bracket with nothing open in the branch.
+        if (brackets == 0) cut = true; else brackets--;
+      }
+    }
+    lexer->advance(lexer, false);
+  }
+  // No `#end`: leave the error to the grammar.
+  return false;
+}
+
+// The branches of a cut conditional after the first, up to its `#end`.
+static bool scan_inactive(TSLexer *lexer) {
+  unsigned nested = 0;
+  lexer->mark_end(lexer);
+  while (lexer->lookahead != 0) {
+    if (is_whitespace(lexer->lookahead)) {
+      lexer->advance(lexer, false);
+      continue;
+    }
+    if (lexer->lookahead == '#') {
+      Directive directive = read_directive(lexer);
+      if (directive == D_END && nested-- == 0) {
+        lexer->result_symbol = CONDITIONAL_INACTIVE;
+        return true;
+      }
+      if (directive == D_IF) nested++;
+    } else if (!skip_text(lexer)) {
+      lexer->advance(lexer, false);
+    }
+    lexer->mark_end(lexer);
+  }
+  return false;
+}
+
+// The number of `#end`s from the one just read to the next `#if`: no two
+// `#end`s without a scanner token between them have the same.
+static uint16_t ends_ahead(TSLexer *lexer) {
+  uint16_t ends = 1;
+  while (lexer->lookahead != 0) {
+    if (lexer->lookahead == '#') {
+      Directive directive = read_directive(lexer);
+      if (directive == D_IF) break;
+      if (directive == D_END && ends < UINT16_MAX) ends++;
+    } else if (!skip_text(lexer)) {
+      lexer->advance(lexer, false);
+    }
+  }
+  return ends;
+}
+
+static bool scan_directive(Scanner *scanner, TSLexer *lexer) {
+  bool in_cut = scanner->depth > 0 && scanner->depth <= MAX_DEPTH &&
+                scanner->cut[scanner->depth - 1];
+  lexer->mark_end(lexer); // END_MARK is empty
+  switch (read_directive(lexer)) {
+    case D_IF: {
+      lexer->mark_end(lexer);
+      bool cut = scanner->depth < MAX_DEPTH && is_cut(lexer);
+      if (scanner->depth < MAX_DEPTH) scanner->cut[scanner->depth] = cut;
+      if (scanner->depth < UINT16_MAX) scanner->depth++;
+      scanner->condition_pending = cut;
+      scanner->marked_end = 0;
+      lexer->result_symbol = cut ? CUT_IF : IF;
+      return true;
+    }
+    case D_ELSE:
+      // In a whole-node conditional `#else` is the grammar's own token.
+      if (!in_cut || !scan_inactive(lexer)) return false;
+      scanner->marked_end = 0;
+      return true;
+    case D_END: {
+      if (in_cut) {
+        lexer->mark_end(lexer);
+        scanner->depth--;
+        scanner->marked_end = 0;
+        lexer->result_symbol = CUT_END;
+        return true;
+      }
+      uint16_t ends = ends_ahead(lexer);
+      // Marked already: now it is the grammar's to read.
+      if (scanner->marked_end == ends) return false;
+      if (scanner->depth > 0) scanner->depth--;
+      scanner->marked_end = ends;
+      lexer->result_symbol = END_MARK;
+      return true;
+    }
+    case D_OTHER:
+      return false;
+  }
+  return false;
+}
+
 // Bounded inline-XML markup, following HaxeFoundation/haxe src/syntax/lexer.ml
 // `lex_xml`/`not_xml`: depth tracks only repetitions of the *root* tag name,
 // there is intentionally no string/quote balancing, and `/>` self-closes only
@@ -150,15 +420,26 @@ bool tree_sitter_haxe_external_scanner_scan(
   TSLexer *lexer,
   const bool *valid_symbols
 ) {
-  (void)payload;
-  if (!valid_symbols[FLOAT_TRAILING_DOT] && !valid_symbols[INLINE_XML]) {
+  Scanner *scanner = (Scanner *)payload;
+  // Inside a string `#if` is text. In error recovery every symbol is valid.
+  if (valid_symbols[STRING_CONTENT] && !valid_symbols[CUT_CONDITION]) {
     return false;
   }
 
-  // Leading whitespace is shared by both external tokens.
+  // Leading whitespace is shared by all external tokens.
   while (is_whitespace(lexer->lookahead)) {
     lexer->advance(lexer, true);
   }
+
+  if (scanner->condition_pending) {
+    scanner->condition_pending = false;
+    if (!skip_condition(lexer)) return false;
+    lexer->mark_end(lexer);
+    lexer->result_symbol = CUT_CONDITION;
+    return true;
+  }
+
+  if (lexer->lookahead == '#') return scan_directive(scanner, lexer);
 
   if (valid_symbols[FLOAT_TRAILING_DOT]) {
     if (lexer->lookahead >= '0' && lexer->lookahead <= '9') {
