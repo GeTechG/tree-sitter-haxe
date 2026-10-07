@@ -828,3 +828,281 @@ brackets in inline markup do not cut a construct
           (identifier)
           (identifier))))
     (conditional_end)))
+
+==========================================
+branches each give the head of an if that has an else
+==========================================
+
+function f() {
+  #if js
+  if (a)
+  #else
+  if (b)
+  #end
+    x = 1;
+  else
+    x = 2;
+}
+
+---
+
+(module
+  (EFunction
+    (identifier)
+    (EBlock
+      (conditional_if)
+      (EIf
+        (identifier)
+        (conditional_inactive)
+        (conditional_end)
+        (EBinop
+          (identifier)
+          (Int))
+        (EBinop
+          (identifier)
+          (Int))))))
+
+==========================================
+branches give a function no body or a body
+==========================================
+
+class A {
+  function f():Int
+    #if a ; #else {
+      return 1;
+    } #end
+
+  function g() {}
+}
+
+---
+
+(module
+  (ClassType
+    (type_name)
+    (ClassMethod
+      (identifier)
+      (ComplexType
+        (TypePath
+          (type_name)))
+      (conditional_if))
+    (conditional_inactive)
+    (conditional_end)
+    (ClassMethod
+      (identifier)
+      (EBlock))))
+
+==========================================
+branches each give the keyword of a declaration
+==========================================
+
+class A {
+  public #if haxe4 final #else var #end message:String;
+  #if a var #end x:Int;
+}
+
+---
+
+(module
+  (ClassType
+    (type_name)
+    (ClassVar
+      (conditional_if)
+      (conditional_inactive)
+      (conditional_end)
+      (identifier)
+      (ComplexType
+        (TypePath
+          (type_name))))
+    (conditional_if)
+    (ClassVar
+      (conditional_end)
+      (identifier)
+      (ComplexType
+        (TypePath
+          (type_name))))))
+
+==========================================
+branches each give the keyword and the name of a declaration
+==========================================
+
+class A {
+  @:p #if a var color #else var tint #end : h3d.Vector4;
+}
+
+---
+
+(module
+  (ClassType
+    (type_name)
+    (MetaDataEntry
+      (identifier))
+    (conditional_if)
+    (ClassVar
+      (identifier)
+      (conditional_inactive)
+      (conditional_end)
+      (ComplexType
+        (TypePath
+          (package_name)
+          (type_name))))))
+
+==========================================
+else-if under a conditional, before an unconditional else
+==========================================
+
+function f() {
+  if (a) {
+    x();
+  }
+  #if !(target.unicode)
+  // not cut
+  else if (b) {
+    y();
+  }
+  #end
+  else if (c)
+    z();
+}
+
+---
+
+(module
+  (EFunction
+    (identifier)
+    (EBlock
+      (EIf
+        (identifier)
+        (EBlock
+          (ECall
+            (identifier)))
+        (conditional_if)
+        (comment
+          (line_comment))
+        (EIf
+          (identifier)
+          (EBlock
+            (ECall
+              (identifier)))
+          (conditional_end)
+          (EIf
+            (identifier)
+            (ECall
+              (identifier))))))))
+
+==========================================
+whole-node conditionals that look like a piece of a declaration or an if
+==========================================
+
+function f() {
+  #if a var x #else var y #end;
+  var r = c ? #if a final_ #else var_ #end : d;
+  if (a) x(); #if b else y(); #end
+  #if a if (b) c(); #end
+}
+
+---
+
+(module
+  (EFunction
+    (identifier)
+    (EBlock
+      (conditional
+        (compile_condition
+          (identifier))
+        (EVars
+          (identifier))
+        (conditional_else
+          (EVars
+            (identifier)))
+        (conditional_end))
+      (EVars
+        (identifier)
+        (ETernary
+          (identifier)
+          (conditional
+            (compile_condition
+              (identifier))
+            (identifier)
+            (conditional_else
+              (identifier))
+            (conditional_end))
+          (identifier)))
+      (EIf
+        (identifier)
+        (ECall
+          (identifier)))
+      (conditional
+        (compile_condition
+          (identifier))
+        (ECall
+          (identifier))
+        (conditional_end))
+      (conditional
+        (compile_condition
+          (identifier))
+        (EIf
+          (identifier)
+          (ECall
+            (identifier)))
+        (conditional_end)))))
+
+==========================================
+conditional as the name of a class var
+==========================================
+
+class A {
+  var #if a textColor #elseif b ink #else color #end : Null<Int>;
+  final #if a x #end = 1;
+}
+
+---
+
+(module
+  (ClassType
+    (type_name)
+    (ClassVar
+      (conditional
+        (compile_condition
+          (identifier))
+        (identifier)
+        (conditional_elseif
+          (compile_condition
+            (identifier))
+          (identifier))
+        (conditional_else
+          (identifier))
+        (conditional_end))
+      (ComplexType
+        (TypePath
+          (type_name)
+          (ComplexType
+            (TypePath
+              (type_name))))))
+    (ClassVar
+      (conditional
+        (compile_condition
+          (identifier))
+        (identifier)
+        (conditional_end))
+      (Int))))
+
+==========================================
+inline markup after two keywords does not cut a construct
+==========================================
+
+if (p) q(); #if a else return <b>{</b>; #end
+
+---
+
+(module
+  (EIf
+    (identifier)
+    (ECall
+      (identifier)))
+  (conditional
+    (compile_condition
+      (identifier))
+    (EReturn
+      (InlineXml))
+    (conditional_end)))

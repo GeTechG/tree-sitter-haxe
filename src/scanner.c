@@ -20,10 +20,10 @@ enum TokenType {
 // Open `#if`s deeper than this are taken as whole-node conditionals.
 #define MAX_DEPTH 255
 
-// A conditional whose branch has an unpaired bracket cuts a construct: the
-// grammar cannot give it as a node. Its directives are extras instead, and
-// `cut` remembers, for each open `#if`, which kind its `#else` and `#end`
-// belong to.
+// A conditional whose branch has an unpaired bracket, or is a piece no node
+// ends with (see `is_cut`), cuts a construct: the grammar cannot give it as a
+// node. Its directives are extras instead, and `cut` remembers, for each open
+// `#if`, which kind its `#else` and `#end` belong to.
 //
 // The `#end` of a whole-node conditional is the grammar's token, and the
 // scanner's state is kept only with a token of its own. So before such an
@@ -316,20 +316,43 @@ static bool skip_text(TSLexer *lexer) {
   return false;
 }
 
+#define WORD_SIZE 8
+
+// Read the word here, returning its length: one of WORD_SIZE or more is cut
+// short in `word`.
+static unsigned read_word(TSLexer *lexer, char word[WORD_SIZE]) {
+  unsigned length = 0;
+  memset(word, 0, WORD_SIZE);
+  while (is_ident_char(lexer->lookahead)) {
+    if (length < WORD_SIZE - 1) word[length] = (char)lexer->lookahead;
+    length++;
+    lexer->advance(lexer, false);
+  }
+  return length;
+}
+
+static bool is_word(const char *word, unsigned length, const char *keyword) {
+  return length == strlen(keyword) && strncmp(word, keyword, length) == 0;
+}
+
+// Skip whitespace and comments. An operator `/` goes with them: no caller
+// looks for one.
+static void skip_blank(TSLexer *lexer) {
+  for (;;) {
+    while (is_whitespace(lexer->lookahead)) lexer->advance(lexer, false);
+    if (lexer->lookahead != '/') return;
+    skip_text(lexer);
+  }
+}
+
 typedef enum { D_OTHER, D_IF, D_ELSE, D_END } Directive;
 
 // Read the directive at `#`. `#elseif` and `#else` are one kind: both end a
 // branch.
 static Directive read_directive(TSLexer *lexer) {
-  char word[8] = {0};
-  unsigned length = 0;
+  char word[WORD_SIZE];
   lexer->advance(lexer, false);
-  while (is_ident_char(lexer->lookahead)) {
-    if (length < sizeof(word) - 1) word[length] = (char)lexer->lookahead;
-    length++;
-    lexer->advance(lexer, false);
-  }
-  if (length >= sizeof(word)) return D_OTHER;
+  if (read_word(lexer, word) >= WORD_SIZE) return D_OTHER;
   if (strcmp(word, "if") == 0) return D_IF;
   if (strcmp(word, "else") == 0 || strcmp(word, "elseif") == 0) return D_ELSE;
   if (strcmp(word, "end") == 0) return D_END;
@@ -388,89 +411,157 @@ static bool skip_condition(TSLexer *lexer, bool mark) {
 }
 
 // Whether `word` is a keyword an expression may follow.
-static bool is_expr_keyword(char *word, unsigned length) {
+static bool is_expr_keyword(const char *word, unsigned length) {
   static const char *const keywords[] = {
     "return", "throw", "else", "in", "case", "do", "try", "untyped", "macro",
   };
-  if (length >= 8) return false;
-  word[length] = 0;
   for (unsigned i = 0; i < sizeof(keywords) / sizeof(keywords[0]); i++) {
-    if (strcmp(word, keywords[i]) == 0) return true;
+    if (is_word(word, length, keywords[i])) return true;
   }
   return false;
 }
 
-// From after `#if` to its `#end`: whether a branch has an unpaired bracket.
+// From after `#if` to past its `#end`: whether the conditional cuts a
+// construct. The sure sign is a branch with an unpaired bracket. With paired
+// brackets, it is a branch no run of whole nodes makes:
+// - a lone `;`, the missing body of a function: `f():T #if a ; #else {..} #end`;
+// - one ending with `if (..)`, a head with no body: `#if a if (x) #else if (y)
+//   #end z; else w;`;
+// - one ending with `var`, a keyword with no name: `#if a final #else var #end
+//   x:T;`;
+// or one that the code after `#end` continues:
+// - a branch ending with `var name`, when `:` follows the conditional:
+//   `#if a var x #else var y #end : T;`;
+// - a first branch starting with `else`, when `else` follows the conditional
+//   too: `#if a else if (x) {..} #end else ..`.
 // A conditional nested in a branch counts by its first branch, the one that
 // is parsed if it is cut itself; were it not cut, no branch would matter.
 static bool is_cut(TSLexer *lexer) {
   if (!skip_condition(lexer, false)) return false;
   bool cut = false;
-  int32_t previous = 0; // the last character of code
-  char word[8];
+  int32_t previous = 0;      // the last character of code
+  bool spaced = false;       // whitespace or a comment after it
+  char word[WORD_SIZE];      // the last word of code
   unsigned word_length = 0;
+  int32_t before_word = 0;   // the character of code before it
+  bool after_var = false;    // it follows `var` or `final`
+  unsigned code = 0;         // characters of code in the branch, a string as one
+  bool first = true;         // in the first branch
+  bool starts_else = false;  // the first branch starts with `else`
+  bool if_head = false;      // the open bracket follows `if`
+  bool ends_if_head = false; // the branch ends with `if (..)`
+  bool names_var = false;    // a branch ended with `var name`
   int brackets = 0;
   unsigned nested = 0;  // open `#if`s inside this one
   unsigned ignored = 0; // the nested level whose later branch we are in
   while (lexer->lookahead != 0) {
     int32_t c = lexer->lookahead;
     if (is_whitespace(c)) {
+      spaced = true;
       lexer->advance(lexer, false);
       continue;
     }
+    // Whether the code ends with `word`.
+    bool word_last = is_ident_char(previous);
     // After an operand `<` compares or opens type parameters; anywhere else,
     // and after a keyword, it opens markup, whose brackets are text.
     if (c == '<' && previous != ')' && previous != ']' && previous != '}' &&
         previous != '"' && previous != '<' &&
-        (!is_ident_char(previous) || is_expr_keyword(word, word_length))) {
+        (!word_last || is_expr_keyword(word, word_length))) {
       lexer->advance(lexer, false);
       skip_markup(lexer);
       previous = '>';
       continue;
     }
-    // A comment changes nothing: `return /* c */ <a/>`. Nor does `/`, an
-    // operator markup does not follow anyway.
-    if (c != '/') {
-      // The word the code ends with, for the keyword check above.
-      if (!is_ident_char(c)) {
-        word_length = 0;
-      } else {
-        if (word_length < sizeof(word) - 1) word[word_length] = (char)c;
-        word_length++;
-      }
-      // A string ends an operand.
-      previous = c == '\'' || c == '~' ? '"' : c;
-    }
-    if (skip_text(lexer)) continue;
     if (c == '#') {
-      switch (read_directive(lexer)) {
-        case D_IF:
-          nested++;
-          if (!skip_condition(lexer, false)) return false;
-          break;
-        case D_ELSE:
-          if (nested == 0) {
-            if (brackets != 0) cut = true;
-            brackets = 0;
-          } else if (ignored == 0) {
-            ignored = nested;
-          }
-          break;
-        case D_END:
-          if (nested == 0) return cut || brackets != 0;
-          if (ignored == nested) ignored = 0;
-          nested--;
-          break;
-        case D_OTHER:
-          break;
+      Directive directive = read_directive(lexer);
+      if (nested == 0 && (directive == D_ELSE || directive == D_END)) {
+        // `@:var` is metadata.
+        bool keyword_last = word_last && before_word != '@';
+        if (brackets != 0 || (code == 1 && previous == ';') || ends_if_head ||
+            (keyword_last && is_word(word, word_length, "var"))) {
+          cut = true;
+        }
+        if (word_last && after_var) names_var = true;
+        if (directive == D_END) {
+          if (cut) return true;
+          skip_blank(lexer);
+          if (names_var && lexer->lookahead == ':') return true;
+          return starts_else && is_word(word, read_word(lexer, word), "else");
+        }
+        brackets = 0;
+        code = 0;
+        first = false;
+      } else {
+        switch (directive) {
+          case D_IF:
+            nested++;
+            if (!skip_condition(lexer, false)) return false;
+            break;
+          case D_ELSE:
+            if (ignored == 0) ignored = nested;
+            break;
+          case D_END:
+            if (ignored == nested) ignored = 0;
+            nested--;
+            break;
+          case D_OTHER:
+            break;
+        }
+        code++;
       }
+      previous = '#';
+      word_length = 0;
+      after_var = false;
+      ends_if_head = false;
       continue;
     }
+    // A comment changes nothing: `return /* c */ <a/>`. Nor does `/`, an
+    // operator markup does not follow anyway.
+    if (c == '/') {
+      spaced = true;
+    } else {
+      if (first && code == 4 && is_word(word, word_length, "else") &&
+          (spaced || !is_ident_char(c))) {
+        starts_else = true;
+      }
+      if (!is_ident_char(c)) {
+        if (c == '(' && brackets == 0) {
+          if_head = word_last && before_word != '@' &&
+                    is_word(word, word_length, "if");
+        }
+        word_length = 0;
+        after_var = false;
+      } else {
+        if (!word_last || spaced) {
+          // A new word.
+          after_var = word_last && before_word != '@' &&
+                      (is_word(word, word_length, "var") ||
+                       is_word(word, word_length, "final"));
+          before_word = previous;
+          word_length = 0;
+        }
+        if (word_length < WORD_SIZE - 1) word[word_length] = (char)c;
+        word_length++;
+      }
+      // A string ends an operand, and `@:` is `@` to the word after it.
+      previous = c == '\'' || c == '~' ? '"'
+                 : c == ':' && previous == '@' ? '@'
+                 : c;
+      spaced = false;
+      ends_if_head = false;
+      code++;
+    }
+    if (skip_text(lexer)) continue;
     if (ignored == 0) {
       if (c == '(' || c == '[' || c == '{') brackets++;
       if (c == ')' || c == ']' || c == '}') {
         // A closing bracket with nothing open in the branch.
-        if (brackets == 0) cut = true; else brackets--;
+        if (brackets == 0) {
+          cut = true;
+        } else if (--brackets == 0 && c == ')') {
+          ends_if_head = if_head;
+        }
       }
     }
     lexer->advance(lexer, false);

@@ -1105,7 +1105,10 @@ export default grammar({
           ),
           choice("var", "final"),
           optional($.optional),
-          field("name", $._identifier),
+          field(
+            "name",
+            choice($._identifier, alias($._name_conditional, $.conditional)),
+          ),
           optional($.property_accessor),
           // The compiler wants no `;` after an initializer that ends in `}` or
           // `#end` (a block, a function, inline markup, a conditional). "Ends
@@ -1121,6 +1124,19 @@ export default grammar({
           ),
         ),
       ),
+    // The name chosen by a conditional: `var #if a x #else y #end : T;`.
+    _name_conditional: ($) =>
+      seq(
+        "#if",
+        $.compile_condition,
+        $._identifier,
+        repeat(alias($._name_conditional_elseif, $.conditional_elseif)),
+        optional(alias($._name_conditional_else, $.conditional_else)),
+        $.conditional_end,
+      ),
+    _name_conditional_elseif: ($) =>
+      seq("#elseif", $.compile_condition, $._identifier),
+    _name_conditional_else: ($) => seq("#else", $._identifier),
     property_accessor: ($) =>
       seq(
         "(",
@@ -1445,13 +1461,16 @@ export default grammar({
         prec.left(1, seq($.compile_condition, "||", $.compile_condition)),
       ),
     // A branch is a run of whole nodes, plus the listed pieces of the node
-    // around it. A branch with an unpaired bracket (`#if a for (..) { #else if
-    // (..) { #end`, a function header per branch) is a `conditional_if`.
+    // around it. A branch the scanner sees to be no such run is a
+    // `conditional_if`: one with an unpaired bracket (`#if a for (..) { #else
+    // if (..) { #end`, a function header per branch), the head of an `if`
+    // (`#if a if (x) #else if (y) #end z;`), a declaration keyword, with its
+    // name or without (`#if a final #else var #end x:T;`), a `;` in place of
+    // a function body, an `else if` before another `else`.
     // Deliberately not parsed, each costing more than it would recover:
-    // the head of a statement (`#if a if (x) #else if (y) #end z;`),
-    // the left end of an expression (`#if a x && #end y`, `#if a c ? x : #end
-    // y`), a declaration keyword or name (`#if a final #else var #end x:T;`),
-    // and a catch between two unconditional ones.
+    // the head of another statement (`#if a while (x) #else while (y) #end
+    // z;`) and the left end of an expression (`#if a x && #end y`, `#if a c ?
+    // x : #end y`).
     _conditional_body: ($) =>
       choice(
         // ISSUE: adding everything sucks

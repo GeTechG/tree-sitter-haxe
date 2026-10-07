@@ -423,6 +423,10 @@
         "required": true,
         "types": [
           {
+            "type": "conditional",
+            "named": true
+          },
+          {
             "type": "identifier",
             "named": true
           }
