@@ -43,3 +43,52 @@ class C { function f() { return g((_) -> 0); } }
               args: (FunctionArg
                 name: (identifier))
               body: (Int))))))))
+
+=====================================
+local static var
+=====================================
+
+function f() {
+	static var faces : Array<Int> = [];
+	static final n = 1;
+}
+
+---
+
+(module
+  (EFunction
+    name: (identifier)
+    body: (EBlock
+      (EVars
+        name: (identifier)
+        type: (ComplexType
+          (TypePath
+            name: (type_name)
+            params: (ComplexType
+              (TypePath
+                name: (type_name)))))
+        value: (EArrayDecl))
+      (EVars
+        name: (identifier)
+        value: (Int)))))
+
+=====================================
+inline constructor call
+=====================================
+
+function f() {
+	var q = inline new h3d.Quat();
+}
+
+---
+
+(module
+  (EFunction
+    name: (identifier)
+    body: (EBlock
+      (EVars
+        name: (identifier)
+        value: (ENew
+          (TypePath
+            pack: (package_name)
+            name: (type_name)))))))

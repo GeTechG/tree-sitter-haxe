@@ -91,3 +91,47 @@ macro $v{v} * 2;
       left: (reification
         (identifier))
       right: (Int))))
+
+=====================================
+macro class without a name
+=====================================
+
+var c = macro class {
+	public function f() {}
+};
+
+---
+
+(module
+  (EVars
+    name: (identifier)
+    value: (macro
+      (ClassType
+        (ClassMethod
+          name: (identifier)
+          body: (EBlock))))))
+
+=====================================
+reification as a callee, space before the brace
+=====================================
+
+macro ${cexpr}(json, variable);
+macro $v { sdata };
+macro $v.field;
+
+---
+
+(module
+  (macro
+    (ECall
+      callee: (reification
+        (identifier))
+      args: (identifier)
+      args: (identifier)))
+  (macro
+    (reification
+      (identifier)))
+  (macro
+    (EField
+      object: (identifier)
+      name: (identifier))))

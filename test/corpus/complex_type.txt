@@ -121,3 +121,87 @@ class C { var h:{}; }
       name: (identifier)
       type: (ComplexType
         (TAnonymous)))))
+
+=====================================
+function type with a package path in the parenthesised arguments
+=====================================
+
+class C {
+	var run : (Int, h3d.Engine) -> Void;
+	var cb : (haxe.io.Bytes -> Void) -> Void;
+	var p : (h3d.Engine);
+}
+
+---
+
+(module
+  (ClassType
+    name: (type_name)
+    (ClassVar
+      name: (identifier)
+      type: (ComplexType
+        arg: (ComplexType
+          (TypePath
+            name: (type_name)))
+        arg: (ComplexType
+          (TypePath
+            pack: (package_name)
+            name: (type_name)))
+        ret: (ComplexType
+          (TypePath
+            name: (type_name)))))
+    (ClassVar
+      name: (identifier)
+      type: (ComplexType
+        arg: (ComplexType
+          arg: (TypePath
+            pack: (package_name)
+            pack: (package_name)
+            name: (type_name))
+          ret: (ComplexType
+            (TypePath
+              name: (type_name))))
+        ret: (ComplexType
+          (TypePath
+            name: (type_name)))))
+    (ClassVar
+      name: (identifier)
+      type: (ComplexType
+        (ComplexType
+          (TypePath
+            pack: (package_name)
+            name: (type_name)))))))
+
+=====================================
+anonymous structure var type without a semicolon
+=====================================
+
+class C {
+	var pos : { x : Float, y : Float }
+	var b : Int;
+}
+
+---
+
+(module
+  (ClassType
+    name: (type_name)
+    (ClassVar
+      name: (identifier)
+      type: (ComplexType
+        (TAnonymous
+          (Field
+            name: (identifier)
+            type: (ComplexType
+              (TypePath
+                name: (type_name))))
+          (Field
+            name: (identifier)
+            type: (ComplexType
+              (TypePath
+                name: (type_name)))))))
+    (ClassVar
+      name: (identifier)
+      type: (ComplexType
+        (TypePath
+          name: (type_name))))))

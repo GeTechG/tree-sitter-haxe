@@ -454,3 +454,41 @@ class ArrayOrItemInt implements IArrayOrItem<Int> extends ArrayOrItem<Int> {}
         (TypePath
           name: (type_name))))))
 
+
+=====================================
+enum constructor with a result type
+=====================================
+
+enum Property<T> {
+	CameraFOVY( v : Float ) : Property<Float>;
+	Other : Property<Int>;
+}
+
+---
+
+(module
+  (EnumType
+    name: (type_name)
+    (TypeParameter
+      name: (type_name))
+    (EnumConstructor
+      name: (identifier)
+      args: (FunctionArg
+        name: (identifier)
+        type: (ComplexType
+          (TypePath
+            name: (type_name))))
+      type: (ComplexType
+        (TypePath
+          name: (type_name)
+          params: (ComplexType
+            (TypePath
+              name: (type_name))))))
+    (EnumConstructor
+      name: (identifier)
+      type: (ComplexType
+        (TypePath
+          name: (type_name)
+          params: (ComplexType
+            (TypePath
+              name: (type_name))))))))

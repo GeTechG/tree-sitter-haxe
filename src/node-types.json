@@ -382,7 +382,7 @@
       },
       "name": {
         "multiple": false,
-        "required": true,
+        "required": false,
         "types": [
           {
             "type": "type_name",
@@ -7856,6 +7856,30 @@
           },
           {
             "type": "TypeParameter",
+            "named": true
+          }
+        ]
+      },
+      "ret": {
+        "multiple": true,
+        "required": false,
+        "types": [
+          {
+            "type": ":",
+            "named": false
+          },
+          {
+            "type": "ComplexType",
+            "named": true
+          }
+        ]
+      },
+      "type": {
+        "multiple": false,
+        "required": false,
+        "types": [
+          {
+            "type": "ComplexType",
             "named": true
           }
         ]

@@ -216,6 +216,7 @@ export default grammar({
     [$._block_or_expr, $._comprehension_body],
     [$._block_or_expr],
     [$._base_type, $.optional],
+    [$._base_type, $._structure_type],
     [$._class_field, $._conditional_body],
     [$._dot_path],
     [$._expr_atom, $._expr_value],
@@ -384,6 +385,7 @@ export default grammar({
               $.EField,
               $._identifier,
               $.super,
+              $.reification,
             ),
           ),
           "(",
@@ -423,7 +425,14 @@ export default grammar({
       ),
     _EParenthesis: ($) => prec(PREC.PRIMARY, seq("(", $._Expr, ")")),
     ENew: ($) =>
-      prec.left(PREC.CALL, seq("new", $.TypePath, "(", commaSep($._Expr), ")")),
+      choice(
+        prec.left(PREC.CALL, seq("new", $.TypePath, "(", commaSep($._Expr), ")")),
+        // Above the plain form, or `inline` would start a call of the result.
+        prec.left(
+          PREC.CALL + 1,
+          seq("inline", "new", $.TypePath, "(", commaSep($._Expr), ")"),
+        ),
+      ),
     EFunction: ($) =>
       prec.right(PREC.CONTROL - 1, seq(optional("inline"), $._function_decl)),
     EArrowFunction: ($) =>
@@ -533,7 +542,27 @@ export default grammar({
           seq(field("operand", $._expr_lhs), field("op", choice("++", "--"))),
         ),
       ),
-    EBlock: ($) => prec.dynamic(-1, seq("{", repeat($._expr_statement), "}")),
+    EBlock: ($) =>
+      prec.dynamic(
+        -1,
+        seq(
+          "{",
+          repeat(
+            choice($._expr_statement, alias($._local_static_vars, $.EVars)),
+          ),
+          "}",
+        ),
+      ),
+    // `static var` local to a function. Only as a block statement: anywhere an
+    // expression may start, `static` would also be the modifier of a class
+    // field under `#if`.
+    _local_static_vars: ($) =>
+      seq(
+        "static",
+        choice("var", "final"),
+        commaSep1($._var_declarator),
+        optional($._semicolon),
+      ),
     EObjectDecl: ($) =>
       prec.dynamic(
         -1,
@@ -742,9 +771,18 @@ export default grammar({
         PREC.MACRO,
         seq(
           "macro",
-          choice($._Expr, $.ClassType, $.EnumType, $._type_annotation),
+          choice(
+            $._Expr,
+            $.ClassType,
+            alias($._macro_class, $.ClassType),
+            $.EnumType,
+            $._type_annotation,
+          ),
         ),
       ),
+    // `macro class { ... }`: the fields of a class that has no name.
+    _macro_class: ($) =>
+      seq(field("kind", "class"), "{", repeat($._class_field), "}"),
     reification: ($) =>
       prec(
         PREC.UNARY,
@@ -756,16 +794,16 @@ export default grammar({
               seq(token.immediate("{"), $._Expr, "}"),
             ),
           ),
-          seq(token(/\$e\{/), $._Expr, "}"),
-          seq(token(/\$a\{/), commaSep($._Expr), "}"),
+          seq(token(/\$e\s*\{/), $._Expr, "}"),
+          seq(token(/\$a\s*\{/), commaSep($._Expr), "}"),
           seq(
-            token(/\$b\{/),
+            token(/\$b\s*\{/),
             repeat(seq($._Expr, optional($._semicolon))),
             "}",
           ),
-          seq(token(/\$i\{/), $._Expr, "}"),
-          seq(token(/\$p\{/), commaSep($._Expr), "}"),
-          seq(token(/\$v\{/), $._Expr, "}"),
+          seq(token(/\$i\s*\{/), $._Expr, "}"),
+          seq(token(/\$p\s*\{/), commaSep($._Expr), "}"),
+          seq(token(/\$v\s*\{/), $._Expr, "}"),
         ),
       ),
 
@@ -817,7 +855,7 @@ export default grammar({
     _ct_fun_param_named: ($) =>
       seq(
         optional($.optional),
-        field("name", $._identifier),
+        field("name", choice($._identifier, alias($.package_name, $.identifier))),
         ":",
         field("type", $.ComplexType),
       ),
@@ -836,6 +874,7 @@ export default grammar({
           "}",
         ),
       ),
+    _structure_type: ($) => $.TAnonymous,
     Field: ($) =>
       seq(
         optional($.optional),
@@ -961,12 +1000,18 @@ export default grammar({
           optional($.optional),
           field("name", $._identifier),
           optional($.property_accessor),
-          optional($._type_annotation),
           // The compiler wants no `;` after an initializer that ends in `}` or
           // `#end` (a block, a function, inline markup, a conditional). "Ends
           // in" is not a rule of this grammar, so the `;` is optional after any
-          // initializer rather than listing the forms and missing some.
-          choice(seq("=", $._Expr, optional($._semicolon)), $._semicolon),
+          // initializer rather than listing the forms and missing some. A type
+          // is not given that latitude, only a structure: `var p : { x : Int }`.
+          choice(
+            seq(
+              optional($._type_annotation),
+              choice(seq("=", $._Expr, optional($._semicolon)), $._semicolon),
+            ),
+            seq(":", field("type", alias($._structure_type, $.ComplexType))),
+          ),
         ),
       ),
     property_accessor: ($) =>
@@ -1036,6 +1081,7 @@ export default grammar({
         field("name", $.identifier),
         optional(field("params", $._type_params)),
         optional(field("args", $._function_args)),
+        optional(field("ret", $._type_annotation)),
         $._semicolon,
       ),
 
@@ -1191,6 +1237,10 @@ export default grammar({
         "enum",
       ),
 
+    // Declared before `identifier` so that it is the token the lexer picks in
+    // the one place both may start, a parenthesised type: `(h3d.Engine) -> Void`
+    // against `(a : Int) -> Void`.
+    package_name: (_) => /[a-z_][a-zA-Z0-9_]*/,
     identifier: (_) => /[a-zA-Z_][a-zA-Z0-9_]*/,
     dollar_identifier: (_) => /\$[a-zA-Z_][a-zA-Z0-9_]*/,
     _identifier: ($) =>
@@ -1203,7 +1253,6 @@ export default grammar({
     // (parser.ml `parse_field`), which is how `haxe.macro.Context` is spelled.
     _keyword_field_name: ($) =>
       alias(choice("macro", "extern", "new"), $.identifier),
-    package_name: (_) => /[a-z_][a-zA-Z0-9_]*/,
     // Higher lexical precedence so an uppercase word prefers `type_name` over
     // `identifier` in states where both are valid (e.g. unnamed function-type
     // args `(Int, String) -> T`); lowercase words still fall back to identifier.
