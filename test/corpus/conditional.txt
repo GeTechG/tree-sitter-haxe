@@ -502,3 +502,55 @@ class A {
         name: (identifier)
         body: (EBlock))
       (conditional_end))))
+
+==========================================
+try without catch before a conditional
+==========================================
+
+try {} #if x a(); #end
+try {} #if x catch (e) {} #end
+try {} catch (e) {} #if x catch (e) {} #else b(); #end
+try {} catch (e) {} #if x b(); #end
+
+---
+
+(module
+  (ETry
+    (EBlock))
+  (conditional
+    (compile_condition
+      (identifier))
+    (ECall
+      (identifier))
+    (conditional_end))
+  (ETry
+    (EBlock)
+    (conditional
+      (compile_condition
+        (identifier))
+      (identifier)
+      (EBlock)
+      (conditional_end)))
+  (ETry
+    (EBlock)
+    (identifier)
+    (EBlock)
+    (conditional
+      (compile_condition
+        (identifier))
+      (identifier)
+      (EBlock)
+      (conditional_else
+        (ECall
+          (identifier)))
+      (conditional_end)))
+  (ETry
+    (EBlock)
+    (identifier)
+    (EBlock))
+  (conditional
+    (compile_condition
+      (identifier))
+    (ECall
+      (identifier))
+    (conditional_end)))

@@ -3158,18 +3158,177 @@
       }
     },
     "ETry": {
-      "type": "PREC_RIGHT",
-      "value": 0,
+      "type": "CHOICE",
+      "members": [
+        {
+          "type": "SEQ",
+          "members": [
+            {
+              "type": "STRING",
+              "value": "try"
+            },
+            {
+              "type": "SYMBOL",
+              "name": "_block_or_expr"
+            }
+          ]
+        },
+        {
+          "type": "PREC",
+          "value": 1,
+          "content": {
+            "type": "SEQ",
+            "members": [
+              {
+                "type": "SEQ",
+                "members": [
+                  {
+                    "type": "STRING",
+                    "value": "try"
+                  },
+                  {
+                    "type": "SYMBOL",
+                    "name": "_block_or_expr"
+                  }
+                ]
+              },
+              {
+                "type": "SYMBOL",
+                "name": "_catches"
+              }
+            ]
+          }
+        },
+        {
+          "type": "SEQ",
+          "members": [
+            {
+              "type": "SEQ",
+              "members": [
+                {
+                  "type": "STRING",
+                  "value": "try"
+                },
+                {
+                  "type": "SYMBOL",
+                  "name": "_block_or_expr"
+                }
+              ]
+            },
+            {
+              "type": "SYMBOL",
+              "name": "_catch_conditionals"
+            }
+          ]
+        }
+      ]
+    },
+    "_catches": {
+      "type": "CHOICE",
+      "members": [
+        {
+          "type": "SYMBOL",
+          "name": "_catch"
+        },
+        {
+          "type": "PREC",
+          "value": 1,
+          "content": {
+            "type": "SEQ",
+            "members": [
+              {
+                "type": "SYMBOL",
+                "name": "_catch"
+              },
+              {
+                "type": "SYMBOL",
+                "name": "_catches"
+              }
+            ]
+          }
+        },
+        {
+          "type": "SEQ",
+          "members": [
+            {
+              "type": "SYMBOL",
+              "name": "_catch"
+            },
+            {
+              "type": "SYMBOL",
+              "name": "_catch_conditionals"
+            }
+          ]
+        }
+      ]
+    },
+    "_catch_conditionals": {
+      "type": "CHOICE",
+      "members": [
+        {
+          "type": "ALIAS",
+          "content": {
+            "type": "SYMBOL",
+            "name": "_catch_conditional"
+          },
+          "named": true,
+          "value": "conditional"
+        },
+        {
+          "type": "PREC",
+          "value": 1,
+          "content": {
+            "type": "SEQ",
+            "members": [
+              {
+                "type": "ALIAS",
+                "content": {
+                  "type": "SYMBOL",
+                  "name": "_catch_conditional"
+                },
+                "named": true,
+                "value": "conditional"
+              },
+              {
+                "type": "SYMBOL",
+                "name": "_catches"
+              }
+            ]
+          }
+        },
+        {
+          "type": "SEQ",
+          "members": [
+            {
+              "type": "ALIAS",
+              "content": {
+                "type": "SYMBOL",
+                "name": "_catch_conditional"
+              },
+              "named": true,
+              "value": "conditional"
+            },
+            {
+              "type": "SYMBOL",
+              "name": "_catch_conditionals"
+            }
+          ]
+        }
+      ]
+    },
+    "_catch_conditional": {
+      "type": "PREC_DYNAMIC",
+      "value": 1,
       "content": {
         "type": "SEQ",
         "members": [
           {
             "type": "STRING",
-            "value": "try"
+            "value": "#if"
           },
           {
             "type": "SYMBOL",
-            "name": "_block_or_expr"
+            "name": "compile_condition"
           },
           {
             "type": "REPEAT1",
@@ -3177,6 +3336,29 @@
               "type": "SYMBOL",
               "name": "_catch"
             }
+          },
+          {
+            "type": "REPEAT",
+            "content": {
+              "type": "SYMBOL",
+              "name": "conditional_elseif"
+            }
+          },
+          {
+            "type": "CHOICE",
+            "members": [
+              {
+                "type": "SYMBOL",
+                "name": "conditional_else"
+              },
+              {
+                "type": "BLANK"
+              }
+            ]
+          },
+          {
+            "type": "SYMBOL",
+            "name": "conditional_end"
           }
         ]
       }
@@ -7463,6 +7645,15 @@
   "conflicts": [
     [
       "_var_declarator"
+    ],
+    [
+      "ETry"
+    ],
+    [
+      "_catches"
+    ],
+    [
+      "_catch_conditionals"
     ],
     [
       "AbstractType",

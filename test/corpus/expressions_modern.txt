@@ -123,3 +123,29 @@ var octal = 0o644;
     (identifier)
     (Int))
   (identifier))
+
+====================
+try without catch
+====================
+
+v ?? { try { return; } v; };
+try a;
+try try a catch (e) b;
+
+---
+
+(module
+  (EBinop
+    (identifier)
+    (EBlock
+      (ETry
+        (EBlock
+          (EReturn)))
+      (identifier)))
+  (ETry
+    (identifier))
+  (ETry
+    (ETry
+      (identifier)
+      (identifier)
+      (identifier))))

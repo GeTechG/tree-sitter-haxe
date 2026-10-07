@@ -128,6 +128,22 @@ function condList($, rule) {
 }
 
 /**
+ * `head`, then the rest of the catches of a `try`. After `head` the `try` may
+ * end: `catch` always continues it, and at `#if` the parser tries both, since
+ * only the branch tells whether the conditional holds catches.
+ * @param {GrammarSymbols<string>} $
+ * @param {Rule} head
+ * @returns {Rule}
+ */
+function tryTail($, head) {
+  return choice(
+    head,
+    prec(1, seq(head, $._catches)),
+    seq(head, $._catch_conditionals),
+  );
+}
+
+/**
  * @param {GrammarSymbols<string>} $
  * @param {Rule} body
  * @param {Rule} elseif
@@ -161,6 +177,11 @@ export default grammar({
     // reduced so that `=` becomes an EBinop assignment. GLR has to carry both
     // or the third and later declarator in `var a = 1, b = 2, c = 3;` is lost.
     [$._var_declarator],
+    // At `#if` after the body of a `try` or after a catch: the conditional
+    // holds more catches of this `try`, or the `try` is over.
+    [$.ETry],
+    [$._catches],
+    [$._catch_conditionals],
     [
       $.AbstractType,
       $.ClassMethod,
@@ -751,12 +772,23 @@ export default grammar({
           field("body", repeat(seq($._Expr, optional($._semicolon)))),
         ),
       ),
-    ETry: ($) =>
-      prec.right(
+    // The compiler takes `try` with no `catch` at all.
+    ETry: ($) => tryTail($, seq("try", $._block_or_expr)),
+    _catches: ($) => tryTail($, $._catch),
+    _catch_conditionals: ($) =>
+      tryTail($, alias($._catch_conditional, $.conditional)),
+    // A conditional whose first branch starts with a catch belongs to the
+    // `try` before it; any other one follows the finished `try`.
+    _catch_conditional: ($) =>
+      prec.dynamic(
+        1,
         seq(
-          "try",
-          $._block_or_expr,
+          "#if",
+          $.compile_condition,
           repeat1($._catch),
+          repeat($.conditional_elseif),
+          optional($.conditional_else),
+          $.conditional_end,
         ),
       ),
     _catch: ($) =>
