@@ -9582,6 +9582,10 @@
           "named": true
         },
         {
+          "type": "Field",
+          "named": true
+        },
+        {
           "type": "Float",
           "named": true
         },
@@ -9655,10 +9659,6 @@
         },
         {
           "type": "null",
-          "named": true
-        },
-        {
-          "type": "optional",
           "named": true
         },
         {
@@ -10660,6 +10660,10 @@
           "named": true
         },
         {
+          "type": "Field",
+          "named": true
+        },
+        {
           "type": "Float",
           "named": true
         },
@@ -10717,10 +10721,6 @@
         },
         {
           "type": "null",
-          "named": true
-        },
-        {
-          "type": "optional",
           "named": true
         },
         {
@@ -11508,6 +11508,10 @@
           "named": true
         },
         {
+          "type": "Field",
+          "named": true
+        },
+        {
           "type": "Float",
           "named": true
         },
@@ -11569,10 +11573,6 @@
         },
         {
           "type": "null",
-          "named": true
-        },
-        {
-          "type": "optional",
           "named": true
         },
         {

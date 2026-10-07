@@ -411,7 +411,7 @@ conditional optional structure field
 typedef T = {
 	?a : Int,
 #if x
-	?b : Bool,
+	?b : Array<Bool>,
 #end
 };
 
@@ -431,7 +431,13 @@ typedef T = {
         (conditional
           (compile_condition
             (identifier))
-          (optional)
-          name: (identifier)
-          value: (identifier)
+          (Field
+            (optional)
+            name: (identifier)
+            type: (ComplexType
+              (TypePath
+                name: (type_name)
+                params: (ComplexType
+                  (TypePath
+                    name: (type_name))))))
           (conditional_end))))))

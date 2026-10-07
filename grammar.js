@@ -880,6 +880,13 @@ export default grammar({
         ),
       ),
     _structure_type: ($) => $.TAnonymous,
+    _optional_field: ($) =>
+      seq(
+        $.optional,
+        field("name", $._identifier),
+        ":",
+        field("type", $.ComplexType),
+      ),
     Field: ($) =>
       seq(
         optional($.optional),
@@ -1367,7 +1374,9 @@ export default grammar({
         // field is read as an object field, so its type must look like an
         // expression (`f: a.B`, not `f: Array<T>`).
         ",",
-        seq(optional($.optional), $._object_field),
+        $._object_field,
+        // `?` marks a structure field for certain, so that one keeps its type.
+        alias($._optional_field, $.Field),
         // Clauses of an enclosing `try` / `switch`.
         $._catch,
         $.switch_case,

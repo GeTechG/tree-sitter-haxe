@@ -4047,6 +4047,35 @@
       "type": "SYMBOL",
       "name": "TAnonymous"
     },
+    "_optional_field": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "SYMBOL",
+          "name": "optional"
+        },
+        {
+          "type": "FIELD",
+          "name": "name",
+          "content": {
+            "type": "SYMBOL",
+            "name": "_identifier"
+          }
+        },
+        {
+          "type": "STRING",
+          "value": ":"
+        },
+        {
+          "type": "FIELD",
+          "name": "type",
+          "content": {
+            "type": "SYMBOL",
+            "name": "ComplexType"
+          }
+        }
+      ]
+    },
     "Field": {
       "type": "SEQ",
       "members": [
@@ -7180,25 +7209,17 @@
           "value": ","
         },
         {
-          "type": "SEQ",
-          "members": [
-            {
-              "type": "CHOICE",
-              "members": [
-                {
-                  "type": "SYMBOL",
-                  "name": "optional"
-                },
-                {
-                  "type": "BLANK"
-                }
-              ]
-            },
-            {
-              "type": "SYMBOL",
-              "name": "_object_field"
-            }
-          ]
+          "type": "SYMBOL",
+          "name": "_object_field"
+        },
+        {
+          "type": "ALIAS",
+          "content": {
+            "type": "SYMBOL",
+            "name": "_optional_field"
+          },
+          "named": true,
+          "value": "Field"
         },
         {
           "type": "SYMBOL",
