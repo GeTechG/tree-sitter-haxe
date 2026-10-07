@@ -180,6 +180,13 @@ bool tree_sitter_haxe_external_scanner_scan(
   bool result = false;
   if (!read_root_name(lexer, &root)) goto done;
 
+  // A comma after the name is a type-argument list (`E<T, ~//>`), never markup:
+  // tag attributes are not comma-separated.
+  while (is_whitespace(lexer->lookahead)) {
+    lexer->advance(lexer, false);
+  }
+  if (lexer->lookahead == ',') goto done;
+
   int depth = 0;
   bool in_open = root.len > 0; // a fragment (empty name) is never "in open"
 

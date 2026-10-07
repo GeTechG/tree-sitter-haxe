@@ -102,3 +102,57 @@ var after = ok;
   (EVars
     (identifier)
     (identifier)))
+
+====================
+type arguments with a comma are not inline XML
+====================
+
+class A {
+	@:from private static function fromFunction<T:Function>(v:T):ERegAbs<T, ~//> return cast v;
+	function f() {
+		var r:E<T, ~/a/> = null;
+	}
+}
+
+---
+
+(module
+  (ClassType
+    (type_name)
+    (MetaDataEntry
+      (identifier))
+    (ClassMethod
+      (identifier)
+      (TypeParameter
+        (type_name)
+        (ComplexType
+          (TypePath
+            (type_name))))
+      (FunctionArg
+        (identifier)
+        (ComplexType
+          (TypePath
+            (type_name))))
+      (ComplexType
+        (TypePath
+          (type_name)
+          (ComplexType
+            (TypePath
+              (type_name)))
+          (Regexp)))
+      (EReturn
+        (ECast
+          (identifier))))
+    (ClassMethod
+      (identifier)
+      (EBlock
+        (EVars
+          (identifier)
+          (ComplexType
+            (TypePath
+              (type_name)
+              (ComplexType
+                (TypePath
+                  (type_name)))
+              (Regexp)))
+          (null))))))
