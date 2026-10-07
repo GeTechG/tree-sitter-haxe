@@ -2660,17 +2660,8 @@
             "type": "FIELD",
             "name": "iterable",
             "content": {
-              "type": "CHOICE",
-              "members": [
-                {
-                  "type": "SYMBOL",
-                  "name": "_Expr"
-                },
-                {
-                  "type": "SYMBOL",
-                  "name": "EConditional"
-                }
-              ]
+              "type": "SYMBOL",
+              "name": "_Expr"
             }
           },
           {
@@ -6703,76 +6694,6 @@
             "name": "conditional_end"
           }
         ]
-      }
-    },
-    "EConditional": {
-      "type": "PREC_DYNAMIC",
-      "value": 1,
-      "content": {
-        "type": "PREC_RIGHT",
-        "value": 1001,
-        "content": {
-          "type": "SEQ",
-          "members": [
-            {
-              "type": "STRING",
-              "value": "#if"
-            },
-            {
-              "type": "SYMBOL",
-              "name": "compile_condition"
-            },
-            {
-              "type": "SYMBOL",
-              "name": "_Expr"
-            },
-            {
-              "type": "REPEAT",
-              "content": {
-                "type": "SEQ",
-                "members": [
-                  {
-                    "type": "STRING",
-                    "value": "#elseif"
-                  },
-                  {
-                    "type": "SYMBOL",
-                    "name": "compile_condition"
-                  },
-                  {
-                    "type": "SYMBOL",
-                    "name": "_Expr"
-                  }
-                ]
-              }
-            },
-            {
-              "type": "CHOICE",
-              "members": [
-                {
-                  "type": "SEQ",
-                  "members": [
-                    {
-                      "type": "STRING",
-                      "value": "#else"
-                    },
-                    {
-                      "type": "SYMBOL",
-                      "name": "_Expr"
-                    }
-                  ]
-                },
-                {
-                  "type": "BLANK"
-                }
-              ]
-            },
-            {
-              "type": "SYMBOL",
-              "name": "conditional_end"
-            }
-          ]
-        }
       }
     },
     "TConditional": {

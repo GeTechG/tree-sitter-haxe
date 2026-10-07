@@ -199,11 +199,12 @@ class C {
       body: (EBlock
         (EFor
           var: (identifier)
-          iterable: (EConditional
+          iterable: (conditional
             (compile_condition
               (identifier))
             (identifier)
-            (identifier)
+            (conditional_else
+              (identifier))
             (conditional_end))
           body: (EBlock))))))
 

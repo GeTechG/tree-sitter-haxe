@@ -660,7 +660,7 @@ export default grammar({
             field("var", $.identifier),
           ),
           "in",
-          field("iterable", choice($._Expr, $.EConditional)),
+          field("iterable", $._Expr),
           ")",
           field("body", $._block_or_expr),
         ),
@@ -1285,24 +1285,6 @@ export default grammar({
 
     conditional: ($) => conditional($),
     _expr_conditional: ($) => conditional($),
-    // A for-in iterable that is one conditional with expression branches. It
-    // predates conditionals as general expressions and keeps its own shape,
-    // which queries/highlights.scm matches on.
-    EConditional: ($) =>
-      prec.dynamic(
-        1,
-        prec.right(
-          PREC.CONDITIONAL,
-          seq(
-            "#if",
-            $.compile_condition,
-            $._Expr,
-            repeat(seq("#elseif", $.compile_condition, $._Expr)),
-            optional(seq("#else", $._Expr)),
-            $.conditional_end,
-          ),
-        ),
-      ),
     // Conditional in type position, whose branches are types:
     // `var buf : #if flash flash.utils.ByteArray #else StringBuf #end;`.
     TConditional: ($) =>

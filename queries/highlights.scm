@@ -208,19 +208,12 @@
 (type_trace
   "$type" @keyword.debug)
 
+; Only the directive keywords, so that the code in the branches keeps its own
+; highlighting.
 [
-  (conditional)
-  (conditional_elseif)
-  (conditional_else)
+  "#if"
+  "#elseif"
+  "#else"
+  "#error"
   (conditional_end)
-  (conditional_error)
 ] @keyword.directive
-
-; Conditional in expression position highlights only its directive keywords, so
-; the branch expressions keep their own highlighting.
-(EConditional
-  [
-    "#if"
-    "#elseif"
-    "#else"
-  ] @keyword.directive)
