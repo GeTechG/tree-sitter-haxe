@@ -442,3 +442,63 @@ typedef T = {
                   (TypePath
                     name: (type_name))))))
           (conditional_end))))))
+
+=====================================
+local static var under #if is a variable, not a class field
+=====================================
+
+function f() {
+	#if x
+	static var z = 1;
+	#else
+	static final w = 2;
+	#end
+}
+
+class A {
+	#if y
+	@:meta static var a(default, never):Int;
+	@:m inline static function g() {}
+	#end
+}
+
+---
+
+(module
+  (EFunction
+    name: (identifier)
+    body: (EBlock
+      (conditional
+        (compile_condition
+          (identifier))
+        (EVars
+          name: (identifier)
+          value: (Int))
+        (conditional_else
+          (EVars
+            name: (identifier)
+            value: (Int)))
+        (conditional_end))))
+  (ClassType
+    name: (type_name)
+    (conditional
+      (compile_condition
+        (identifier))
+      (MetaDataEntry
+        name: (identifier))
+      (ClassVar
+        name: (identifier)
+        (property_accessor
+          get: (property_access
+            (default))
+          set: (property_access
+            (never)))
+        type: (ComplexType
+          (TypePath
+            name: (type_name))))
+      (MetaDataEntry
+        name: (identifier))
+      (ClassMethod
+        name: (identifier)
+        body: (EBlock))
+      (conditional_end))))

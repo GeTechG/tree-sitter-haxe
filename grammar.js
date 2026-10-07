@@ -127,16 +127,22 @@ function condList($, rule) {
   );
 }
 
-/** @param {GrammarSymbols<string>} $ @returns {Rule} */
-function conditional($) {
+/**
+ * @param {GrammarSymbols<string>} $
+ * @param {Rule} body
+ * @param {Rule} elseif
+ * @param {Rule} else_
+ * @returns {Rule}
+ */
+function conditional($, body, elseif, else_) {
   return prec.right(
     PREC.CONDITIONAL,
     seq(
       "#if",
       $.compile_condition,
-      repeat($._conditional_body),
-      repeat($.conditional_elseif),
-      optional($.conditional_else),
+      repeat(body),
+      repeat(elseif),
+      optional(else_),
       $.conditional_end,
     ),
   );
@@ -559,15 +565,20 @@ export default grammar({
           "}",
         ),
       ),
-    // `static var` local to a function. Only as a block statement: anywhere an
-    // expression may start, `static` would also be the modifier of a class
-    // field under `#if`.
+    // `static var` local to a function. Only as a statement of a block or of
+    // a conditional standing where an expression may: anywhere else `static`
+    // would also be the modifier of a class field under `#if`. The precedence
+    // beats `modifier`, which the same conditional body also offers, and a
+    // `,` or `;` after a declarator belongs to the statement.
     _local_static_vars: ($) =>
-      seq(
-        "static",
-        choice("var", "final"),
-        commaSep1($._var_declarator),
-        optional($._semicolon),
+      prec.right(
+        31,
+        seq(
+          "static",
+          choice("var", "final"),
+          commaSep1($._var_declarator),
+          optional($._semicolon),
+        ),
       ),
     EObjectDecl: ($) =>
       prec.dynamic(
@@ -1288,8 +1299,28 @@ export default grammar({
 
     // ------------------------------------------------------------------------
 
-    conditional: ($) => conditional($),
-    _expr_conditional: ($) => conditional($),
+    conditional: ($) =>
+      conditional(
+        $,
+        $._conditional_body,
+        $.conditional_elseif,
+        $.conditional_else,
+      ),
+    // Where an expression may stand no class field can, so `static var` in a
+    // branch is the local variable of a function.
+    _expr_conditional: ($) =>
+      conditional(
+        $,
+        $._expr_conditional_body,
+        alias($._expr_conditional_elseif, $.conditional_elseif),
+        alias($._expr_conditional_else, $.conditional_else),
+      ),
+    _expr_conditional_body: ($) =>
+      choice(alias($._local_static_vars, $.EVars), $._conditional_body),
+    _expr_conditional_elseif: ($) =>
+      seq("#elseif", $.compile_condition, repeat($._expr_conditional_body)),
+    _expr_conditional_else: ($) =>
+      seq("#else", repeat($._expr_conditional_body)),
     // Conditional in type position, whose branches are types:
     // `var buf : #if flash flash.utils.ByteArray #else StringBuf #end;`.
     TConditional: ($) =>
