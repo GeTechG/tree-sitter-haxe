@@ -387,6 +387,19 @@ static bool skip_condition(TSLexer *lexer, bool mark) {
   }
 }
 
+// Whether `word` is a keyword an expression may follow.
+static bool is_expr_keyword(char *word, unsigned length) {
+  static const char *const keywords[] = {
+    "return", "throw", "else", "in", "case", "do", "try", "untyped", "macro",
+  };
+  if (length >= 8) return false;
+  word[length] = 0;
+  for (unsigned i = 0; i < sizeof(keywords) / sizeof(keywords[0]); i++) {
+    if (strcmp(word, keywords[i]) == 0) return true;
+  }
+  return false;
+}
+
 // From after `#if` to its `#end`: whether a branch has an unpaired bracket.
 // A conditional nested in a branch counts by its first branch, the one that
 // is parsed if it is cut itself; were it not cut, no branch would matter.
@@ -394,6 +407,8 @@ static bool is_cut(TSLexer *lexer) {
   if (!skip_condition(lexer, false)) return false;
   bool cut = false;
   int32_t previous = 0; // the last character of code
+  char word[8];
+  unsigned word_length = 0;
   int brackets = 0;
   unsigned nested = 0;  // open `#if`s inside this one
   unsigned ignored = 0; // the nested level whose later branch we are in
@@ -403,16 +418,22 @@ static bool is_cut(TSLexer *lexer) {
       lexer->advance(lexer, false);
       continue;
     }
-    // After an operand `<` compares or opens type parameters; anywhere else
-    // it opens markup, whose brackets are text.
-    // ponytail: `return <a>(</a>` is still read as code; needs the keyword.
-    if (c == '<' && !is_ident_char(previous) && previous != ')' &&
-        previous != ']' && previous != '}' && previous != '"' &&
-        previous != '<') {
+    // After an operand `<` compares or opens type parameters; anywhere else,
+    // and after a keyword, it opens markup, whose brackets are text.
+    if (c == '<' && previous != ')' && previous != ']' && previous != '}' &&
+        previous != '"' && previous != '<' &&
+        (!is_ident_char(previous) || is_expr_keyword(word, word_length))) {
       lexer->advance(lexer, false);
       skip_markup(lexer);
       previous = '>';
       continue;
+    }
+    // The word the code ends with, for the keyword check above.
+    if (!is_ident_char(c)) {
+      word_length = 0;
+    } else {
+      if (word_length < sizeof(word) - 1) word[word_length] = (char)c;
+      word_length++;
     }
     // A string ends an operand, a comment changes nothing.
     if (c != '/') previous = c == '\'' || c == '~' ? '"' : c;
