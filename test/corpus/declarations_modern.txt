@@ -76,3 +76,238 @@ typedef Shape = {
           (ComplexType
             (TypePath
               (type_name))))))))
+
+====================
+module-level fields with modifiers
+====================
+
+private function helper() {}
+private final regex = 1;
+inline final foo = 2;
+overload extern inline function printValue(input:Int) {}
+extern function ext(i:Int):Void;
+
+---
+
+(module
+  (ClassMethod
+    (identifier)
+    (EBlock))
+  (ClassVar
+    (identifier)
+    (Int))
+  (ClassVar
+    (identifier)
+    (Int))
+  (ClassMethod
+    (identifier)
+    (FunctionArg
+      (identifier)
+      (ComplexType
+        (TypePath
+          (type_name))))
+    (EBlock))
+  (ClassMethod
+    (identifier)
+    (FunctionArg
+      (identifier)
+      (ComplexType
+        (TypePath
+          (type_name))))
+    (ComplexType
+      (TypePath
+        (type_name)))))
+
+====================
+metadata on a type parameter
+====================
+
+class Gen<@:const T, @:a @:b S:Int> {}
+
+---
+
+(module
+  (ClassType
+    (type_name)
+    (TypeParameter
+      (MetaDataEntry
+        (identifier))
+      (type_name))
+    (TypeParameter
+      (MetaDataEntry
+        (identifier))
+      (MetaDataEntry
+        (identifier))
+      (type_name)
+      (ComplexType
+        (TypePath
+          (type_name))))))
+
+====================
+type name with leading underscores
+====================
+
+private typedef __Int64 = hl.I64;
+abstract Int64(__Int64) from __Int64 to __Int64 {
+  static function make<_T1:E<_T1>>(a:__Int64):__Int64;
+}
+class _Startup {}
+
+---
+
+(module
+  (DefType
+    (type_name)
+    (ComplexType
+      (TypePath
+        (package_name)
+        (type_name))))
+  (AbstractType
+    (type_name)
+    (ComplexType
+      (TypePath
+        (type_name)))
+    (ComplexType
+      (TypePath
+        (type_name)))
+    (ComplexType
+      (TypePath
+        (type_name)))
+    (ClassMethod
+      (identifier)
+      (TypeParameter
+        (type_name)
+        (ComplexType
+          (TypePath
+            (type_name)
+            (ComplexType
+              (TypePath
+                (type_name))))))
+      (FunctionArg
+        (identifier)
+        (ComplexType
+          (TypePath
+            (type_name))))
+      (ComplexType
+        (TypePath
+          (type_name)))))
+  (ClassType
+    (type_name)))
+
+====================
+private property accessor
+====================
+
+class P { var foo(private get, private set):Int; }
+
+---
+
+(module
+  (ClassType
+    (type_name)
+    (ClassVar
+      (identifier)
+      (property_accessor
+        (property_access
+          (get))
+        (property_access
+          (set)))
+      (ComplexType
+        (TypePath
+          (type_name))))))
+
+====================
+several metadata before a final class or an abstract
+====================
+
+@:access(String)
+@:coreApi final class EReg {}
+@:forward(bytes)
+@:access(hxd.Pixels)
+abstract PixelsFloat(Pixels) to Pixels {}
+
+---
+
+(module
+  (MetaDataEntry
+    (identifier)
+    (identifier))
+  (MetaDataEntry
+    (identifier))
+  (ClassType
+    (type_name))
+  (MetaDataEntry
+    (identifier)
+    (identifier))
+  (MetaDataEntry
+    (identifier)
+    (EField
+      (identifier)
+      (identifier)))
+  (AbstractType
+    (type_name)
+    (ComplexType
+      (TypePath
+        (type_name)))
+    (ComplexType
+      (TypePath
+        (type_name)))))
+
+====================
+module-level property and #error
+====================
+
+#error "Foo.hx should not be used"
+@:isVar var prop(get, set):String = "prop";
+
+---
+
+(module
+  (conditional_error
+    (String
+      (fragment)))
+  (MetaDataEntry
+    (identifier))
+  (ClassVar
+    (identifier)
+    (property_accessor
+      (property_access
+        (get))
+      (property_access
+        (set)))
+    (ComplexType
+      (TypePath
+        (type_name)))
+    (String
+      (fragment))))
+
+====================
+default as a type argument, reification name in a catch
+====================
+
+var a:A<default, Int> = new G<default>();
+try {} catch ($i:Int) {}
+
+---
+
+(module
+  (EVars
+    (identifier)
+    (ComplexType
+      (TypePath
+        (type_name)
+        (default)
+        (ComplexType
+          (TypePath
+            (type_name)))))
+    (ENew
+      (TypePath
+        (type_name)
+        (default))))
+  (ETry
+    (EBlock)
+    (identifier)
+    (ComplexType
+      (TypePath
+        (type_name)))
+    (EBlock)))

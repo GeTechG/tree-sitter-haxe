@@ -735,6 +735,10 @@
             "named": true
           },
           {
+            "type": "default",
+            "named": true
+          },
+          {
             "type": "false",
             "named": true
           },
@@ -816,6 +820,10 @@
           },
           {
             "type": "String",
+            "named": true
+          },
+          {
+            "type": "default",
             "named": true
           },
           {
@@ -4819,7 +4827,7 @@
     },
     "children": {
       "multiple": true,
-      "required": true,
+      "required": false,
       "types": [
         {
           "type": "MetaDataEntry",
@@ -5228,7 +5236,7 @@
     "named": true,
     "fields": {},
     "children": {
-      "multiple": false,
+      "multiple": true,
       "required": false,
       "types": [
         {
@@ -6963,7 +6971,7 @@
     "named": true,
     "fields": {},
     "children": {
-      "multiple": false,
+      "multiple": true,
       "required": true,
       "types": [
         {
@@ -7347,6 +7355,16 @@
           }
         ]
       }
+    },
+    "children": {
+      "multiple": true,
+      "required": false,
+      "types": [
+        {
+          "type": "MetaDataEntry",
+          "named": true
+        }
+      ]
     }
   },
   {
@@ -8540,6 +8558,10 @@
           },
           {
             "type": "String",
+            "named": true
+          },
+          {
+            "type": "default",
             "named": true
           },
           {
@@ -11200,7 +11222,7 @@
     },
     "children": {
       "multiple": true,
-      "required": true,
+      "required": false,
       "types": [
         {
           "type": "AbstractType",
@@ -11544,7 +11566,7 @@
     "named": true,
     "fields": {},
     "children": {
-      "multiple": false,
+      "multiple": true,
       "required": true,
       "types": [
         {
@@ -11734,7 +11756,7 @@
       }
     },
     "children": {
-      "multiple": false,
+      "multiple": true,
       "required": false,
       "types": [
         {
@@ -11946,7 +11968,15 @@
           "named": true
         },
         {
+          "type": "ClassMethod",
+          "named": true
+        },
+        {
           "type": "ClassType",
+          "named": true
+        },
+        {
+          "type": "ClassVar",
           "named": true
         },
         {
@@ -12074,6 +12104,10 @@
           "named": true
         },
         {
+          "type": "MetaDataEntry",
+          "named": true
+        },
+        {
           "type": "Regexp",
           "named": true
         },
@@ -12083,6 +12117,10 @@
         },
         {
           "type": "conditional",
+          "named": true
+        },
+        {
+          "type": "conditional_error",
           "named": true
         },
         {
@@ -13371,6 +13409,180 @@
           }
         ]
       }
+    },
+    "children": {
+      "multiple": true,
+      "required": false,
+      "types": [
+        {
+          "type": "EArray",
+          "named": true
+        },
+        {
+          "type": "EArrayDecl",
+          "named": true
+        },
+        {
+          "type": "EArrowFunction",
+          "named": true
+        },
+        {
+          "type": "EBinop",
+          "named": true
+        },
+        {
+          "type": "EBlock",
+          "named": true
+        },
+        {
+          "type": "EBreak",
+          "named": true
+        },
+        {
+          "type": "ECall",
+          "named": true
+        },
+        {
+          "type": "ECast",
+          "named": true
+        },
+        {
+          "type": "ECheckType",
+          "named": true
+        },
+        {
+          "type": "EContinue",
+          "named": true
+        },
+        {
+          "type": "EField",
+          "named": true
+        },
+        {
+          "type": "EFor",
+          "named": true
+        },
+        {
+          "type": "EFunction",
+          "named": true
+        },
+        {
+          "type": "EIf",
+          "named": true
+        },
+        {
+          "type": "EMeta",
+          "named": true
+        },
+        {
+          "type": "ENew",
+          "named": true
+        },
+        {
+          "type": "EObjectDecl",
+          "named": true
+        },
+        {
+          "type": "EReturn",
+          "named": true
+        },
+        {
+          "type": "ESwitch",
+          "named": true
+        },
+        {
+          "type": "ETernary",
+          "named": true
+        },
+        {
+          "type": "EThrow",
+          "named": true
+        },
+        {
+          "type": "ETry",
+          "named": true
+        },
+        {
+          "type": "EUnop",
+          "named": true
+        },
+        {
+          "type": "EUntyped",
+          "named": true
+        },
+        {
+          "type": "EVars",
+          "named": true
+        },
+        {
+          "type": "EWhile",
+          "named": true
+        },
+        {
+          "type": "Float",
+          "named": true
+        },
+        {
+          "type": "InlineXml",
+          "named": true
+        },
+        {
+          "type": "Int",
+          "named": true
+        },
+        {
+          "type": "Regexp",
+          "named": true
+        },
+        {
+          "type": "String",
+          "named": true
+        },
+        {
+          "type": "conditional",
+          "named": true
+        },
+        {
+          "type": "false",
+          "named": true
+        },
+        {
+          "type": "identifier",
+          "named": true
+        },
+        {
+          "type": "macro",
+          "named": true
+        },
+        {
+          "type": "null",
+          "named": true
+        },
+        {
+          "type": "reification",
+          "named": true
+        },
+        {
+          "type": "super",
+          "named": true
+        },
+        {
+          "type": "this",
+          "named": true
+        },
+        {
+          "type": "true",
+          "named": true
+        },
+        {
+          "type": "type_trace",
+          "named": true
+        },
+        {
+          "type": "wildcard_pattern",
+          "named": true
+        }
+      ]
     }
   },
   {

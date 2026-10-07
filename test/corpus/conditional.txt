@@ -598,3 +598,195 @@ try {} #if x #elseif y catch (e) {} #end
         (identifier)
         (EBlock))
       (conditional_end))))
+
+====================
+keyword as a compile condition
+====================
+
+#if static
+var a = 1;
+#elseif (false || !null)
+var b = 2;
+#end
+
+---
+
+(module
+  (conditional
+    (compile_condition
+      (identifier))
+    (ClassVar
+      (identifier)
+      (Int))
+    (conditional_elseif
+      (compile_condition
+        (compile_condition
+          (compile_condition
+            (identifier))
+          (compile_condition
+            (compile_condition
+              (identifier)))))
+      (ClassVar
+        (identifier)
+        (Int)))
+    (conditional_end)))
+
+====================
+negated flag before a parenthesised expression, keyword after a dot
+====================
+
+#if !lua
+(null:Dynamic).nonExistent();
+#end
+#if target.static
+var a = 1;
+#end
+
+---
+
+(module
+  (conditional
+    (compile_condition
+      (compile_condition
+        (identifier)))
+    (ECall
+      (EField
+        (ECheckType
+          (null)
+          (ComplexType
+            (TypePath
+              (type_name))))
+        (identifier)))
+    (conditional_end))
+  (conditional
+    (compile_condition
+      (compile_condition
+        (identifier))
+      (identifier))
+    (ClassVar
+      (identifier)
+      (Int))
+    (conditional_end)))
+
+====================
+macro modifier under #if
+====================
+
+class C {
+  public static #if !macro macro #end function f() {}
+}
+
+---
+
+(module
+  (ClassType
+    (type_name)
+    (ClassMethod
+      (conditional
+        (compile_condition
+          (compile_condition
+            (identifier)))
+        (modifier)
+        (conditional_end))
+      (identifier)
+      (EBlock))))
+
+====================
+conditional choosing the function to call
+====================
+
+function f() {
+  return #if (haxe_ver < 4.1) Std.is #else Std.isOfType #end(s, String);
+}
+function g() {
+  #if neko neko.Lib.rethrow #else throw #end (e);
+}
+
+---
+
+(module
+  (EFunction
+    (identifier)
+    (EBlock
+      (EReturn
+        (ECall
+          (conditional
+            (compile_condition
+              (compile_condition
+                (compile_condition
+                  (identifier))
+                (compile_condition
+                  (Float))))
+            (EField
+              (identifier)
+              (identifier))
+            (conditional_else
+              (EField
+                (identifier)
+                (identifier)))
+            (conditional_end))
+          (identifier)
+          (identifier)))))
+  (EFunction
+    (identifier)
+    (EBlock
+      (ECall
+        (conditional
+          (compile_condition
+            (identifier))
+          (EField
+            (EField
+              (identifier)
+              (identifier))
+            (identifier))
+          (conditional_else)
+          (conditional_end))
+        (identifier)))))
+
+====================
+conditional holding the left end of an expression
+====================
+
+function f() {
+  if (#if target.threaded cpu == null && #end !q.isAvailable()) {}
+  return #if (hlsdl > version("1.15.0")) isArray ? A : #end B;
+}
+
+---
+
+(module
+  (EFunction
+    (identifier)
+    (EBlock
+      (EIf
+        (conditional
+          (compile_condition
+            (compile_condition
+              (identifier))
+            (identifier))
+          (EBinop
+            (identifier)
+            (null))
+          (conditional_end))
+        (ECall
+          (EField
+            (EUnop
+              (identifier))
+            (identifier)))
+        (EBlock))
+      (EReturn
+        (conditional
+          (compile_condition
+            (compile_condition
+              (compile_condition
+                (identifier))
+              (compile_condition
+                (compile_condition
+                  (identifier))
+                (compile_condition
+                  (String
+                    (fragment))))))
+          (identifier)
+          (identifier)
+          (conditional_end))
+        (identifier)))))

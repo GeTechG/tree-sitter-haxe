@@ -106,6 +106,32 @@ const RESERVED_KEYWORDS = [
   "while",
 ];
 
+const EXPR_START_KEYWORDS = [
+  "break",
+  "cast",
+  "continue",
+  "do",
+  "false",
+  "final",
+  "for",
+  "function",
+  "if",
+  "inline",
+  "macro",
+  "new",
+  "null",
+  "return",
+  "super",
+  "switch",
+  "this",
+  "throw",
+  "true",
+  "try",
+  "untyped",
+  "var",
+  "while",
+];
+
 /**
  * A comma-separated list (trailing comma allowed) in which a conditional may
  * stand between elements and bring its own commas: `[#if a 1, #end 2]`.
@@ -161,6 +187,83 @@ function conditional($, body, elseif, else_) {
       optional(else_),
       $.conditional_end,
     ),
+  );
+}
+
+/** @param {GrammarSymbols<string>} $ @returns {Rule} */
+const varModifier = ($) =>
+  choice(
+    $.visibility,
+    "abstract",
+    "dynamic",
+    "extern",
+    "inline",
+    "macro",
+    "overload",
+    "override",
+    "static",
+  );
+/** @param {GrammarSymbols<string>} $ @returns {Rule} */
+const methodModifier = ($) =>
+  choice(
+    $.visibility,
+    "macro",
+    "dynamic",
+    "inline",
+    "override",
+    "abstract",
+    "extern",
+    "final",
+    "overload",
+    "static",
+  );
+
+/**
+ * @param {GrammarSymbols<string>} $
+ * @param {Rule} modifiers
+ * @returns {Rule}
+ */
+function classVar($, modifiers) {
+  return prec.left(
+    PREC.ASSIGN,
+    seq(
+      modifiers,
+      choice("var", "final"),
+      optional($.optional),
+      field(
+        "name",
+        choice(
+          $._identifier,
+          $._soft_keyword_ident,
+          alias($._name_conditional, $.conditional),
+        ),
+      ),
+      optional($.property_accessor),
+      // The compiler wants no `;` after an initializer that ends in `}` or
+      // `#end` (a block, a function, inline markup, a conditional). "Ends
+      // in" is not a rule of this grammar, so the `;` is optional after any
+      // initializer rather than listing the forms and missing some. A type
+      // is not given that latitude, only a structure: `var p : { x : Int }`.
+      choice(
+        seq(
+          optional($._type_annotation),
+          choice(seq("=", $._Expr, optional($._semicolon)), $._semicolon),
+        ),
+        seq(":", field("type", alias($._structure_type, $.ComplexType))),
+      ),
+    ),
+  );
+}
+
+/**
+ * @param {GrammarSymbols<string>} $
+ * @param {Rule} modifiers
+ * @returns {Rule}
+ */
+function classMethod($, modifiers) {
+  return prec.right(
+    PREC.ASSIGN,
+    seq(modifiers, $._function_decl, optional($._semicolon)),
   );
 }
 
@@ -224,7 +327,6 @@ export default grammar({
       $.EnumType,
       $._conditional_body,
     ],
-    [$.AbstractType, $.ClassType, $.DefType, $.EnumType],
     [$.AbstractType, $.ClassType, $.ClassVar, $.ClassMethod],
     [
       $.AbstractType,
@@ -234,7 +336,6 @@ export default grammar({
       $._conditional_body,
     ],
     [$.AbstractType, $.ClassType, $._conditional_body],
-    [$.AbstractType, $.ClassType],
     [$.AbstractType, $.DefType, $.EnumType, $._conditional_body],
     [$.AbstractType, $.DefType, $.EnumType],
     [$.ClassMethod, $._conditional_body],
@@ -269,6 +370,9 @@ export default grammar({
     [$._EConst, $._expr_lhs, $.compile_condition],
     [$._EConst, $._expr_lhs],
     [$._EConst, $.compile_condition],
+    [$.true, $.compile_condition],
+    [$.false, $.compile_condition],
+    [$.null, $.compile_condition],
     [$._Expr, $._expr_lhs],
     [$._block_or_expr, $._comprehension_body],
     [$._block_or_expr],
@@ -298,6 +402,18 @@ export default grammar({
     [$.ClassType, $.modifier],
     [$.ClassType, $.ClassMethod, $.modifier],
     [$.ClassMethod, $.modifier],
+    [$._EConst, $.ClassVar, $.ClassMethod],
+    [$._EConst, $.ClassType, $.ClassVar, $.ClassMethod],
+    [$._soft_keyword_ident, $.compile_condition],
+    [$.AbstractType, $.ClassType, $._module_modifier],
+    [$.ClassType, $._module_modifier],
+    [$.AbstractType, $.ClassType, $._module_modifier, $.DefType, $.EnumType],
+    [$._module_var, $._module_method],
+    [$.ECall, $.EFunction, $._module_method],
+    [$._var_declarator, $._module_property],
+    [$.EThrow, $._conditional_body],
+    [$.ClassVar, $.ClassMethod, $.modifier],
+    [$.ClassVar, $.modifier],
   ],
   inline: ($) => [
     $._semicolon,
@@ -314,7 +430,16 @@ export default grammar({
         optional($.package),
         // Imports are not held to the top: a leading `#if ... #end` parses as an
         // expression statement, and imports may still follow it.
-        repeat(choice($.import, $.using, $._type_decl, $._expr_statement)),
+        repeat(
+          choice(
+            $.import,
+            $.using,
+            $._type_decl,
+            $._expr_statement,
+            $._module_field,
+            $.conditional_error,
+          ),
+        ),
       ),
 
     //////////////////////////////////////////////////////////////////////////
@@ -368,7 +493,34 @@ export default grammar({
 
     _expr_statement: ($) => seq($._Expr, optional($._semicolon)),
 
-    _Expr: ($) => choice($.EBinop, $.ETernary, $.EUnop, $._expr_postfix),
+    _Expr: ($) =>
+      choice($.EBinop, $.ETernary, $.EUnop, $._expr_postfix, $._headed_expr),
+    // An expression whose left end is under `#if`:
+    // `#if a x == null && #end y`, `#if a c ? x : #end y`.
+    _headed_expr: ($) =>
+      prec.right(
+        PREC.ASSIGN,
+        seq(alias($._head_conditional, $.conditional), $._Expr),
+      ),
+    _head_conditional: ($) =>
+      seq(
+        "#if",
+        $.compile_condition,
+        $._expr_head,
+        repeat(
+          alias(
+            seq("#elseif", $.compile_condition, $._expr_head),
+            $.conditional_elseif,
+          ),
+        ),
+        optional(alias(seq("#else", $._expr_head), $.conditional_else)),
+        $.conditional_end,
+      ),
+    _expr_head: ($) =>
+      choice(
+        seq($._Expr, choice("||", "&&", "|", "^", "&", "+", "-", "*", "/")),
+        seq($._Expr, "?", $._Expr, ":"),
+      ),
     _expr_postfix: ($) => choice($.ECall, $.EField, $.EArray, $._expr_prim),
     _expr_prim: ($) =>
       choice(
@@ -442,7 +594,17 @@ export default grammar({
               $.EArray,
               $.EField,
               $._identifier,
+              $._soft_keyword_ident,
+              alias("abstract", $.identifier),
+              // A function named `$`, as jQuery externs have it.
+              alias("$", $.identifier),
+              // `#if a f #else g #end(x)`
+              alias($._expr_conditional, $.conditional),
               $.super,
+              $.this,
+              $.null,
+              $.ENew,
+              $.ECheckType,
               $.reification,
             ),
           ),
@@ -480,6 +642,10 @@ export default grammar({
         $.this,
         $.super,
         $._identifier,
+        $._soft_keyword_ident,
+        // The value an abstract wraps, inside its own methods. Below the
+        // modifier, which is what `abstract` before a declaration is.
+        prec.dynamic(-1, prec(-1, alias("abstract", $.identifier))),
       ),
     _EParenthesis: ($) => prec(PREC.PRIMARY, seq("(", $._Expr, ")")),
     ENew: ($) =>
@@ -516,7 +682,8 @@ export default grammar({
       ),
     _var_declarator: ($) =>
       seq(
-        field("name", $._identifier),
+        optional($._metadata),
+        field("name", choice($._identifier, $._soft_keyword_ident)),
         optional(field("type", $._type_annotation)),
         optional(
           seq("=", field("value", choice(prec(1, $.InlineXml), $._Expr))),
@@ -592,12 +759,18 @@ export default grammar({
           PREC.UNARY,
           seq(
             field("op", choice("++", "--", "+", "-", "!", "~", "...")),
-            field("operand", $._expr_value),
+            field("operand", choice($._expr_value, $.EUnop)),
           ),
         ),
-        prec.left(
-          PREC.POSTFIX,
-          seq(field("operand", $._expr_lhs), field("op", choice("++", "--"))),
+        $._postfix_unop,
+      ),
+    // `!` is a postfix operator to the parser too: `@:op(A!)`.
+    _postfix_unop: ($) =>
+      prec.left(
+        PREC.POSTFIX,
+        seq(
+          field("operand", choice($._expr_lhs, $.this, $._EParenthesis)),
+          field("op", choice("++", "--", "!")),
         ),
       ),
     EBlock: ($) =>
@@ -663,6 +836,7 @@ export default grammar({
       ),
     _comprehension_for: ($) =>
       seq(
+        optional("inline"),
         "for",
         "(",
         choice(
@@ -711,22 +885,36 @@ export default grammar({
         ),
       ),
     EUntyped: ($) => prec.right(seq("untyped", $._Expr)),
-    EFor: ($) =>
-      prec(
-        PREC.PRIMARY + 1,
-        seq(
-          "for",
-          "(",
-          choice(
-            seq(field("key", $.identifier), "=>", field("value", $.identifier)),
-            field("var", $.identifier),
+    EFor: ($) => {
+      const loop = seq(
+        "for",
+        "(",
+        choice(
+          seq(
+            choice(
+              seq(
+                field("key", $.identifier),
+                "=>",
+                field("value", $.identifier),
+              ),
+              field("var", $.identifier),
+            ),
+            "in",
+            field("iterable", $._Expr),
           ),
-          "in",
-          field("iterable", $._Expr),
-          ")",
-          field("body", $._block_or_expr),
+          // The parser takes any expression and leaves `x in y` to the typer:
+          // `macro for (1) "foo"`.
+          prec.dynamic(-1, field("iterable", $._Expr)),
         ),
-      ),
+        ")",
+        field("body", $._block_or_expr),
+      );
+      return choice(
+        prec(PREC.PRIMARY + 1, loop),
+        // Above the plain form, or `inline` would start a call of the result.
+        prec(PREC.PRIMARY + 2, seq("inline", loop)),
+      );
+    },
     EIf: ($) =>
       prec.right(
         PREC.CONTROL + 1,
@@ -785,16 +973,18 @@ export default grammar({
           field("patterns", commaSep1(choice($._Expr, $.capture_variable))),
           optional(seq("if", "(", field("guard", $._Expr), ")")),
           ":",
-          field("body", repeat(seq($._Expr, optional($._semicolon)))),
+          field("body", repeat($._case_statement)),
         ),
       ),
+    _case_statement: ($) =>
+      choice($._expr_statement, alias($._local_static_vars, $.EVars)),
     switch_default: ($) =>
       prec.right(
         1,
         seq(
           choice("default", seq("case", alias($.wildcard_pattern, ""))),
           ":",
-          field("body", repeat(seq($._Expr, optional($._semicolon)))),
+          field("body", repeat($._case_statement)),
         ),
       ),
     // The compiler takes `try` with no `catch` at all.
@@ -841,7 +1031,7 @@ export default grammar({
       seq(
         "catch",
         "(",
-        field("name", $.identifier),
+        field("name", $._identifier),
         optional($._type_annotation),
         ")",
         field("body", $._block_or_expr),
@@ -854,7 +1044,7 @@ export default grammar({
     EMeta: ($) =>
       prec.right(
         PREC.PRIMARY,
-        seq(repeat1($.MetaDataEntry), field("expr", $._Expr)),
+        seq($._metadata, field("expr", $._Expr)),
         // seq(
         //   repeat1($.MetaDataEntry),
         //   field("expr", choice($._type_decl, $.EFunction, $.EVars)),
@@ -903,7 +1093,10 @@ export default grammar({
       ),
 
     type_trace: ($) =>
-      prec(PREC.CALL + 1, seq("$type", "(", field("type", $._Expr), ")")),
+      prec(
+        PREC.CALL + 1,
+        seq("$type", "(", field("type", $._Expr), repeat(seq(",", $._Expr)), ")"),
+      ),
 
     // ------------------------------------------------------------------------
 
@@ -954,6 +1147,7 @@ export default grammar({
     _ct_fun_param_named: ($) =>
       seq(
         optional($.optional),
+        optional("..."),
         field("name", choice($._identifier, alias($.package_name, $.identifier))),
         ":",
         field("type", $.ComplexType),
@@ -991,12 +1185,16 @@ export default grammar({
 
     TypeParameter: ($) =>
       seq(
-        field("meta", repeat($.MetaDataEntry)),
+        optional(field("meta", $._metadata)),
         field("name", $._type_name),
         optional(seq(":", field("constraint", $.ComplexType))),
         optional(seq("=", field("default", $.ComplexType))),
       ),
 
+    // One rule wherever a run of metadata may open more than one construct
+    // (`@:a @:b final class C {}` against `@:a @:b final x = 1`), so that the
+    // parser need not tell them apart before the construct itself does.
+    _metadata: ($) => prec.right(repeat1($.MetaDataEntry)),
     MetaDataEntry: ($) =>
       prec.right(
         seq(
@@ -1028,7 +1226,7 @@ export default grammar({
       prec.dynamic(
         1,
         seq(
-          repeat($.MetaDataEntry),
+          optional($._metadata),
           optional($.optional),
           optional(field("rest", $.rest)),
           // `_` is the wildcard keyword token; accept it as a parameter name so
@@ -1043,7 +1241,7 @@ export default grammar({
 
     _type_decl: ($) =>
       seq(
-        field("meta", repeat($.MetaDataEntry)),
+        optional(field("meta", $._metadata)),
         choice($.AbstractType, $.ClassType, $.DefType, $.EnumType),
       ),
 
@@ -1083,47 +1281,8 @@ export default grammar({
         "}",
       ),
     _class_field: ($) =>
-      seq(repeat($.MetaDataEntry), choice($.ClassVar, $.ClassMethod)),
-    ClassVar: ($) =>
-      prec.left(
-        PREC.ASSIGN,
-        seq(
-          optional(
-            repeat1(
-              choice(
-                $.visibility,
-                "abstract",
-                "dynamic",
-                "extern",
-                "inline",
-                "macro",
-                "overload",
-                "override",
-                "static",
-              ),
-            ),
-          ),
-          choice("var", "final"),
-          optional($.optional),
-          field(
-            "name",
-            choice($._identifier, alias($._name_conditional, $.conditional)),
-          ),
-          optional($.property_accessor),
-          // The compiler wants no `;` after an initializer that ends in `}` or
-          // `#end` (a block, a function, inline markup, a conditional). "Ends
-          // in" is not a rule of this grammar, so the `;` is optional after any
-          // initializer rather than listing the forms and missing some. A type
-          // is not given that latitude, only a structure: `var p : { x : Int }`.
-          choice(
-            seq(
-              optional($._type_annotation),
-              choice(seq("=", $._Expr, optional($._semicolon)), $._semicolon),
-            ),
-            seq(":", field("type", alias($._structure_type, $.ComplexType))),
-          ),
-        ),
-      ),
+      seq(optional($._metadata), choice($.ClassVar, $.ClassMethod)),
+    ClassVar: ($) => classVar($, optional(repeat1(varModifier($)))),
     // The name chosen by a conditional: `var #if a x #else y #end : T;`.
     _name_conditional: ($) =>
       seq(
@@ -1146,6 +1305,8 @@ export default grammar({
         ")",
       ),
     property_access: ($) =>
+      seq(optional("private"), $._property_access),
+    _property_access: ($) =>
       choice(
         alias("default", $.default),
         alias("get", $.get),
@@ -1156,28 +1317,44 @@ export default grammar({
         $.identifier,
       ),
     ClassMethod: ($) =>
-      prec.right(
-        PREC.ASSIGN,
+      classMethod($, optional(repeat1(methodModifier($)))),
+    // A field of the module itself. It needs a modifier in front: without
+    // one, `var x = 1;` and `function f() {}` are the expression statements
+    // they have always been.
+    _module_field: ($) =>
+      prec.dynamic(
+        -1,
         seq(
-          optional(
-            repeat1(
-              choice(
-                $.visibility,
-                "macro",
-                "dynamic",
-                "inline",
-                "override",
-                "abstract",
-                "extern",
-                "final",
-                "overload",
-                "static",
-              ),
-            ),
+          optional($._metadata),
+          choice(
+            alias($._module_var, $.ClassVar),
+            alias($._module_property, $.ClassVar),
+            alias($._module_method, $.ClassMethod),
           ),
-          $._function_decl,
-          optional($._semicolon),
         ),
+      ),
+    // `inline` stays a bare token: it also opens an expression, and the two
+    // readings must not part before the token after it is seen.
+    _module_modifier: ($) =>
+      choice($.visibility, "dynamic", "extern", "overload"),
+    _module_var: ($) =>
+      classVar(
+        $,
+        seq(choice($._module_modifier, "inline"), repeat(varModifier($))),
+      ),
+    // A property is a field with or without a modifier: `var x(get, set):T;`.
+    _module_property: ($) =>
+      seq(
+        choice("var", "final"),
+        field("name", $._identifier),
+        $.property_accessor,
+        optional($._type_annotation),
+        choice(seq("=", $._Expr, optional($._semicolon)), $._semicolon),
+      ),
+    _module_method: ($) =>
+      classMethod(
+        $,
+        seq(choice($._module_modifier, "inline"), repeat(methodModifier($))),
       ),
     DefType: ($) =>
       seq(
@@ -1200,7 +1377,7 @@ export default grammar({
       ),
     EnumConstructor: ($) =>
       seq(
-        field("meta", repeat($.MetaDataEntry)),
+        optional(field("meta", $._metadata)),
         field("name", $.identifier),
         optional(field("params", $._type_params)),
         optional(field("args", $._function_args)),
@@ -1337,12 +1514,18 @@ export default grammar({
         $.null,
         $.Regexp,
         $.EArrayDecl,
+        // The default of the type parameter: `Map<default, Int>`.
+        alias("default", $.default),
         seq("-", choice($.Int, $.Float)),
         seq(choice("!", "~"), choice($.Int, $.Float, $.String)),
       ),
 
     _function_args: ($) =>
-      seq("(", field("args", commaSep($.FunctionArg)), ")"),
+      seq(
+        "(",
+        optional(seq(field("args", commaSep1($.FunctionArg)), optional(","))),
+        ")",
+      ),
 
     // ------------------------------------------------------------------------
 
@@ -1360,6 +1543,8 @@ export default grammar({
         ),
         "final",
         "enum",
+        // Also opens an expression (`macro e`), which a branch may hold too.
+        "macro",
       ),
 
     // Declared before `identifier` so that it is the token the lexer picks in
@@ -1381,7 +1566,8 @@ export default grammar({
     // Higher lexical precedence so an uppercase word prefers `type_name` over
     // `identifier` in states where both are valid (e.g. unnamed function-type
     // args `(Int, String) -> T`); lowercase words still fall back to identifier.
-    type_name: (_) => token(prec(1, /[A-Z][a-zA-Z0-9_]*/)),
+    // Leading underscores as in the compiler's `idtype`: `__Int64`, `_Startup`.
+    type_name: (_) => token(prec(1, /_*[A-Z][a-zA-Z0-9_]*/)),
     _type_name: ($) =>
       choice($.type_name, alias($.dollar_identifier, $.type_name)),
 
@@ -1432,15 +1618,35 @@ export default grammar({
     compile_condition: ($) =>
       choice(
         $.identifier,
-        alias("macro", $.identifier),
+        // A keyword is a flag name here (parse_macro_cond): `#if static`,
+        // `#if false`. Left out are the ones that start an expression, which
+        // would also read as the argument of a call: `#if a (return x) #end`.
+        alias(
+          choice(
+            ...RESERVED_KEYWORDS.filter((kw) => !EXPR_START_KEYWORDS.includes(kw)),
+            "macro",
+          ),
+          $.identifier,
+        ),
+        // Below the expression reading: `a == b #if x && false #end`.
+        prec.dynamic(-1, alias(choice("true", "false", "null"), $.identifier)),
         $.Int,
         $.Float,
         $.String,
         seq("(", $.compile_condition, ")"),
-        prec.left(7, seq($.compile_condition, ".", $.identifier)),
+        prec.left(
+          7,
+          seq(
+            $.compile_condition,
+            ".",
+            choice($.identifier, alias(choice(...RESERVED_KEYWORDS), $.identifier)),
+          ),
+        ),
         // Function-call form, e.g. `version("1.10.0")` in `#if (hl_ver >= version(...))`.
         prec.left(7, seq($.compile_condition, "(", commaSep($.compile_condition), ")")),
-        prec.right(6, seq("!", $.compile_condition)),
+        // Above the call, or the `(` of the branch would be its arguments:
+        // `#if !lua (x : T).f(); #end`.
+        prec.right(8, seq("!", $.compile_condition)),
         prec.left(
           5,
           seq($.compile_condition, choice("*", "/", "%"), $.compile_condition),
@@ -1467,10 +1673,8 @@ export default grammar({
     // (`#if a if (x) #else if (y) #end z;`), a declaration keyword, with its
     // name or without (`#if a final #else var #end x:T;`), a `;` in place of
     // a function body, an `else if` before another `else`.
-    // Deliberately not parsed, each costing more than it would recover:
-    // the head of another statement (`#if a while (x) #else while (y) #end
-    // z;`) and the left end of an expression (`#if a x && #end y`, `#if a c ?
-    // x : #end y`).
+    // Deliberately not parsed, costing more than it would recover: the head
+    // of another statement (`#if a while (x) #else while (y) #end z;`).
     _conditional_body: ($) =>
       choice(
         // ISSUE: adding everything sucks
@@ -1486,7 +1690,7 @@ export default grammar({
         seq("extends", field("extends", $.TypePath)),
         seq("implements", field("implements", $.TypePath)),
         $.conditional_error,
-        repeat1($.MetaDataEntry),
+        $._metadata,
         // Pieces of an enclosing list (array, arguments, object or structure
         // fields): `[#if a "x", "y" #end]`, `{ #if a f: 1, #end }`. A structure
         // field is read as an object field, so its type must look like an
@@ -1507,6 +1711,8 @@ export default grammar({
         // `if (a) b; #if x else c; #end`.
         alias($._if_else_open, $.EIf),
         seq("else", field("else", $._block_or_expr)),
+        // The keyword of the call after it: `#if x rethrow #else throw #end (e)`.
+        "throw",
       ),
     conditional_binop: ($) =>
       seq(

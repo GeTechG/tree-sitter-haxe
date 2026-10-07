@@ -92,3 +92,35 @@ function f() {
           (TypePath
             pack: (package_name)
             name: (type_name)))))))
+
+====================
+trailing comma in function parameters
+====================
+
+function f(a:Int, b:Int,) {}
+var g = (a, b,) -> a;
+
+---
+
+(module
+  (EFunction
+    (identifier)
+    (FunctionArg
+      (identifier)
+      (ComplexType
+        (TypePath
+          (type_name))))
+    (FunctionArg
+      (identifier)
+      (ComplexType
+        (TypePath
+          (type_name))))
+    (EBlock))
+  (EVars
+    (identifier)
+    (EArrowFunction
+      (FunctionArg
+        (identifier))
+      (FunctionArg
+        (identifier))
+      (identifier))))

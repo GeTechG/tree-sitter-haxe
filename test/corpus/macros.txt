@@ -135,3 +135,18 @@ macro $v.field;
     (EField
       object: (identifier)
       name: (identifier))))
+
+====================
+for over an expression that is no `x in y`
+====================
+
+macro for (1) "foo";
+
+---
+
+(module
+  (macro
+    (EFor
+      (Int)
+      (String
+        (fragment)))))

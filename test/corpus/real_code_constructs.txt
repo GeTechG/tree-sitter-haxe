@@ -302,3 +302,38 @@ class S {
       (ComplexType
         (TypePath
           (type_name))))))
+
+====================
+as is a plain identifier outside an import
+====================
+
+class C {
+  var as : String;
+  function f() {
+    var as = 1;
+    use(as(value, String));
+  }
+}
+
+---
+
+(module
+  (ClassType
+    (type_name)
+    (ClassVar
+      (identifier)
+      (ComplexType
+        (TypePath
+          (type_name))))
+    (ClassMethod
+      (identifier)
+      (EBlock
+        (EVars
+          (identifier)
+          (Int))
+        (ECall
+          (identifier)
+          (ECall
+            (identifier)
+            (identifier)
+            (identifier)))))))

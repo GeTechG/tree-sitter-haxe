@@ -149,3 +149,224 @@ try try a catch (e) b;
       (identifier)
       (identifier)
       (identifier))))
+
+====================
+postfix operators on this, a parenthesis and under a prefix operator
+====================
+
+this++;
+(e[3])++;
+-x++;
+x!;
+
+---
+
+(module
+  (EUnop
+    (this))
+  (EUnop
+    (EArray
+      (identifier)
+      (Int)))
+  (EUnop
+    (EUnop
+      (identifier)))
+  (EUnop
+    (identifier)))
+
+====================
+abstract as a value
+====================
+
+function f() {
+  switch abstract { case _: }
+  if (abstract == null) return abstract;
+  return abstract + 2;
+}
+
+---
+
+(module
+  (EFunction
+    (identifier)
+    (EBlock
+      (ESwitch
+        (identifier)
+        (switch_default))
+      (EIf
+        (EBinop
+          (identifier)
+          (null))
+        (EReturn
+          (identifier)))
+      (EReturn
+        (EBinop
+          (identifier)
+          (Int))))))
+
+====================
+call of this, null, a new object and a type check
+====================
+
+this();
+null();
+new Example()();
+(null:Dynamic).nonExistent();
+(this : Func->Void)(callback);
+
+---
+
+(module
+  (ECall
+    (this))
+  (ECall
+    (null))
+  (ECall
+    (ENew
+      (TypePath
+        (type_name))))
+  (ECall
+    (EField
+      (ECheckType
+        (null)
+        (ComplexType
+          (TypePath
+            (type_name))))
+      (identifier)))
+  (ECall
+    (ECheckType
+      (this)
+      (ComplexType
+        (TypePath
+          (type_name))
+        (ComplexType
+          (TypePath
+            (type_name)))))
+    (identifier)))
+
+====================
+inline for
+====================
+
+inline for (i in 0...3) {}
+use([inline for (v in a) v]);
+
+---
+
+(module
+  (EFor
+    (identifier)
+    (EBinop
+      (Int)
+      (Int))
+    (EBlock))
+  (ECall
+    (identifier)
+    (EArrayDecl
+      (EFor
+        (identifier)
+        (identifier)
+        (identifier)))))
+
+====================
+named rest argument of a function type, metadata on a local variable
+====================
+
+var fn:(...r:Int) -> Array<Int>;
+var @:nullSafety(Off) n:Null<String> = null, @:a m = 1;
+
+---
+
+(module
+  (EVars
+    (identifier)
+    (ComplexType
+      (identifier)
+      (ComplexType
+        (TypePath
+          (type_name)))
+      (ComplexType
+        (TypePath
+          (type_name)
+          (ComplexType
+            (TypePath
+              (type_name)))))))
+  (EVars
+    (MetaDataEntry
+      (identifier)
+      (identifier))
+    (identifier)
+    (ComplexType
+      (TypePath
+        (type_name)
+        (ComplexType
+          (TypePath
+            (type_name)))))
+    (null)
+    (MetaDataEntry
+      (identifier))
+    (identifier)
+    (Int)))
+
+====================
+stacked prefix operators, call of abstract and of a lone dollar
+====================
+
+!!v;
+abstract();
+$(x);
+
+---
+
+(module
+  (EUnop
+    (EUnop
+      (identifier)))
+  (ECall
+    (identifier))
+  (ECall
+    (identifier)
+    (identifier)))
+
+====================
+type trace with two arguments
+====================
+
+$type(a, _);
+
+---
+
+(module
+  (type_trace
+    (identifier)
+    (wildcard_pattern)))
+
+====================
+local static var in a switch case
+====================
+
+switch i {
+  case 1:
+    static var b = 0;
+    b++;
+  default:
+    static final c = 1;
+}
+
+---
+
+(module
+  (ESwitch
+    (identifier)
+    (cases
+      (switch_case
+        (Int)
+        (EVars
+          (identifier)
+          (Int))
+        (EUnop
+          (identifier))))
+    (switch_default
+      (EVars
+        (identifier)
+        (Int)))))
